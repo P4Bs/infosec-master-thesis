@@ -9,6 +9,12 @@
 \usepackage{amssymb}
 \usepackage{float}
 \usepackage{titlesec}
+\usepackage[
+backend=biber,
+sorting=none
+]{biblatex}
+
+\addbibresource{bibliography.bib}
 
 \begin{document}
 
@@ -19,7 +25,7 @@
 \selectlanguage{english}
 \begin{abstract}
 	
-	\bfseries{\large{Keywords:}} SAST, LLM, C programming language, CWE, Stack, Heap
+	\bfseries{\large{Keywords:}} Static Application Security Testing, Large Language Models, C programming language, False Positives
 \end{abstract}
 
 \newpage
@@ -27,41 +33,47 @@
 %% Abstract Spanish
 \selectlanguage{spanish}
 \begin{abstract}
-	\bfseries{\large{Keywords:}} Analizadores de código estático, Modelos Extensos de Lenguaje, Lenguaje de programación C, Enumeración de Debilidades Comunes, Pila, Montículo
+	\bfseries{\large{Keywords:}} Analizador de código estático, Modelo extenso de lenguaje, Lenguaje de programación C, Falsos positivos
 \end{abstract}
 
 
 \tableofcontents	
 
 \section{Introducción}
-El lenguaje de programación C es uno de los más populares en la industria de desarrollo de software.  
+El lenguaje de programación C es uno de los lenguajes más populares en la industria de desarrollo de software. Este lenguaje adquiere
+una notable presencia en sistemas en los que se necesita del acceso a bajo nivel al hardware, la eficiencia temporal y el control explicito de
+los recursos. Originalmente, C se planteo como un lenguaje de programación de sistemas para la familia de sistemas operativos tipo UNIX, 
+caracterizado técnicamente como un lenguaje liviano, de propósito general y portable \cite{seacord-2013}.
+Una gran cantidad de aplicaciones de alto rendimiento y sistemas críticos se implementan en C y continúan en soporte.
 
-se planteo originalmente como un lenguaje de programación de sistemas para la familia de sistemas operativos tipo UNIX. Las funcionalidades de este lenguaje
-lo caracterizaron técnicamente como un lenguaje liviano, de propósito general y sin ofrecer demasiadas restricciones al programador para implementar sus sistemas \cite{seacord-2013}. El éxito de C se da en la gran cantidad de aplicaciones de alto rendimiento y sistemas críticos que hacen uso de C como principal lenguaje de la implementación,
-además de figurar dos décadas completas en el podio del índice TIOBE \cite{tiobe-2022}.
+Sin embargo, las características que popularizaron a C también son el fondo detrás de una gestión insegura de la memoria intrínseca
+al lenguaje. Esta gestión insegura propicia la aparición de errores en el manejo de la memoria, que, además de ser difíciles de detectar,
+constituyen una de las superficies de ataque más persistentes en los lenguajes de programación \textit{memory-unsafe}.
 
+Los lenguajes de programación \textit{memory-unsafe} no cuentan, por defecto, con mecanismos de prevención de errores comunes de programación
+relacionados con la libertad en el acceso a memoria. Bajo esta libertad, el programador gestiona manualmente la memoria, pero esta libertad
+conlleva la aparición de distintos tipos de vulnerabilidades, entre las que figuran los desbordamientos de pila, las filtraciones de memoria y la
+corrupción de memoria
 
-Sin embargo, 
+Concretamente, las vulnerabilidades de corrupción de memoria constituyen el tipo de vulnerabilidad más frecuente. La sobre-escritura de metadatos
+del montículo, los punteros colgantes, las lecturas de memoria no inicializada, las liberaciones inválidas de memoria o la doble liberación de memoria
+son debilidades reconocidas por investigadores de seguridad y cuentan con sus respectivas técnicas de protección para abordarlas \cite{moghadam-2024}.
 
-Estas aplicaciones destacan por contar con una
-notable presencia en el software de dominio público y por contar con un mantenimiento activo.
+Cada una de las vulnerabilidades anteriormente mencionadas se recogen en la Common Weakness Enumeration (CWE), por lo que hacemos énfasis en que las
+fallas que se encuentran en programas escritos en C no son errores individuales aislados, sino que son consecuencia del diseño estructural del lenguaje.
 
-podio de   
+A la vista de este escenario, la detección de debilidades supone una necesidad con objeto de asegurar la calidad y diseñar software seguro. La literatura
+sobre el análisis de programas señala una reducción en el coste de corrección de vulnerabilidades si se detectan tempranamente. De hecho, facilita la
+implementación de prácticas de seguridad <<\textit{shift-left}>> e intervenir antes de que los defectos lleguen a la etapa de despliegue o de explotación \cite{cifuentes-2023}.
 
-
-\subsection{El lenguaje de programación C en el contexto de este trabajo}
-
-
-\subsection{Los analizadores de código estático}
-
-
-\subsection{Los modelos extensos de lenguaje}
-
-
+Los analizadores de código estático son herramientas que permiten la detección de vulnerabilidades en el código fuente a partir de la detección de patrones. Son herramientas de referencia en la industria de desarrollo software, por ejemplo en las canalizaciones de integración continua, dado que permiten identificar estas vulnerabilidades en las fases tempranas del ciclo de vida del software. Por el contrario, hay estudios empíricos que muestran sus limitaciones en la precisión, cobertura, explicabilidad y unas altas tasas de positivos en sus reportajes \cite{aloraini-2019}. Por lo tanto, detectar estas vulnerabilidades asegurando una alta fiabilidad y utilidad sigue siendo un problema abierto.
 
 \section{Estado del arte}
+En el contexto de este trabajo profundizaremos en el análisis de vulnerabilidades relacionadas con el montículo, o \textit{heap} y la pila, o \textit{stack}. Son segmentos de datos relevantes en la estructura de la memoria de los programas que los lenguajes de programación emplean. Tanto en C como en C++, el manejo de estos segmentos de datos es explicito, dicho de otra forma, se delega en el programador la gestión de la memoria del programa \cite{hertz-2005}. Expondremos el funcionamiento del montículo y de la pila, y posteriormente explicaremos las debilidades en el lenguaje C de estos segmentos de datos para comprender como pueden explotarse.
+
 
 \subsection{El funcionamiento de la pila}
+La pila es el segmento de datos que maneja los datos de las subrutinas. En el proceso de llamada a una subrutina se aloja dentro del segmento de datos una nueva entrada.
 
 \subsection{El funcionamiento del montículo}
 
@@ -78,9 +90,8 @@ podio de
 
 
 \section{Conclusiones}
+La conclusión
 
-\bibliographystyle{ieeetr}
-\bibliography{bibliography.bib}
+\printbibliography
 
-	
 \end{document}
