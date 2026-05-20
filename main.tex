@@ -69,17 +69,27 @@ implementación de prácticas de seguridad <<\textit{shift-left}>> e intervenir 
 Los analizadores de código estático son herramientas que permiten la detección de vulnerabilidades en el código fuente a partir de la detección de patrones. Son herramientas de referencia en la industria de desarrollo software, por ejemplo en las canalizaciones de integración continua, dado que permiten identificar estas vulnerabilidades en las fases tempranas del ciclo de vida del software. Por el contrario, hay estudios empíricos que muestran sus limitaciones en la precisión, cobertura, explicabilidad y unas altas tasas de positivos en sus reportajes \cite{aloraini-2019}. Por lo tanto, detectar estas vulnerabilidades asegurando una alta fiabilidad y utilidad sigue siendo un problema abierto.
 
 \section{Estado del arte}
-En el contexto de este trabajo profundizaremos en el análisis de vulnerabilidades relacionadas con el montículo, o \textit{heap} y la pila, o \textit{stack}. Son segmentos de datos relevantes en la estructura de la memoria de los programas que los lenguajes de programación emplean. Tanto en C como en C++, el manejo de estos segmentos de datos es explicito, dicho de otra forma, se delega en el programador la gestión de la memoria del programa \cite{hertz-2005}. Expondremos el funcionamiento del montículo y de la pila, y posteriormente explicaremos las debilidades en el lenguaje C de estos segmentos de datos para comprender como pueden explotarse.
-
+En el contexto de este trabajo profundizaremos en el análisis de vulnerabilidades relacionadas con la pila, o \textit{stack} y el montículo, también llamado \textit{heap}. Ambas son dos regiones de memoria relevantes en la estructura de los programas en tiempo de ejecución. Tanto en C como en C++, el manejo de estas dos estructuras es explicito, dicho de otra forma, se delega en el programador la gestión de la memoria del programa \cite{hertz-2005}. Expondremos el funcionamiento del montículo y de la pila, y posteriormente explicaremos las debilidades en el lenguaje C de estos segmentos de datos para comprender como pueden explotarse.
 
 \subsection{El funcionamiento de la pila}
-La pila es el segmento de datos que maneja los datos de las subrutinas. En el proceso de llamada a una subrutina se aloja dentro del segmento de datos una nueva entrada.
+En la pila se almacenan los datos relativos a la ejecución de las subrutinas de un programa. Cuando se realiza la llamada a una subrutina, se aloja dentro de la pila una nueva entrada, denominada marco de pila, o \textit{stack frame}, el cual contiene los parámetros de la subrutina, la dirección de retorno del contador de programa y sus variables locales.
+
+La estrategia de gestión de datos que implementa la pila se basa en que la primera entrada que se desaloja es la última que se añadió, dicho de otra forma, la pila sigue la estrategia LIFO. Es por esto que conforme se ejecutan las subrutinas en un programa, las primeras que se alojan son las que se encuentran anidadas dentro de esta, y, consecuentemente, son estas las primeras que se liberan en la pila. Es por ello que, análogamente, su funcionamiento se asemeja al de una pila de libros, apilándose estos uno encima de otro y retirándolos desde el que se encuentra más arriba al que esta más abajo.
+
+En lo referente al funcionamiento a bajo nivel, el mecanismo de alojamiento de memoria en la pila se basa en el desplazamiento de un puntero de memoria hasta el bloque de direcciones que empieza tras el último marco de pila. Además, las instrucciones de ensamblador a las que traducen la mayoría de los compiladores las llamadas a subrutinas, son instrucciones especializadas; de forma que se disponen de métodos muy eficaces para realizar estas operaciones de aprovisionamiento en memoria.
+
+Por otra parte, en el segmento de datos, la pila comparte la misma región de memoria que el montículo; con la particularidad de que los punteros de direcciones, que delimitan ambas regiones, crecen en sentidos opuestos. Por convención, en la mayoría de arquitecturas de computadores, la pila crece decrementando el puntero mientras que el montículo lo hace incrementándolo.
+
+Puesto que ambas estructuras coexisten en la misma región de memoria y crecen en sentidos opuestos, existe un limite de tamaño al cual pueden crecer ambas. Por esta limitación, se materializa el error por \textbf{desbordamiento de la pila}, y su aparición se da cuando en un programa se usa más memoria de la que tiene disponible en la pila de llamadas. En otros términos, ocurre cuando el puntero de la pila de llamadas excede el limite nominal de la pila.
+
+%¿Deberíamos hacer alusión a cual es el tamaño de la región de memoria de la pila en el lenguaje C?%
 
 \subsection{El funcionamiento del montículo}
 
 \subsection{Identificación de CWEs en código de pila}
 
 \subsection{Identificación de CWEs en código de montículo}
+
 
 \section{Metodología de análisis}
 
