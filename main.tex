@@ -39,10 +39,11 @@ sorting=none
 
 \tableofcontents	
 
+\listoffigures
+
 \section{Introducción}
 El lenguaje de programación C es uno de los lenguajes más populares en la industria de desarrollo de software. Este lenguaje adquiere
-una notable presencia en sistemas en los que se necesita del acceso a bajo nivel al hardware, la eficiencia temporal y el control explicito de
-los recursos. Originalmente, C se planteo como un lenguaje de programación de sistemas para la familia de sistemas operativos tipo UNIX, 
+una notable presencia en sistemas en los que se necesita del acceso a bajo nivel al hardware, la eficiencia temporal y el control explícito de los recursos. Originalmente, C se planteo como un lenguaje de programación de sistemas para la familia de sistemas operativos tipo UNIX, 
 caracterizado técnicamente como un lenguaje liviano, de propósito general y portable \cite{seacord-2013}.
 Una gran cantidad de aplicaciones de alto rendimiento y sistemas críticos se implementan en C y continúan en soporte.
 
@@ -69,22 +70,45 @@ implementación de prácticas de seguridad <<\textit{shift-left}>> e intervenir 
 Los analizadores de código estático son herramientas que permiten la detección de vulnerabilidades en el código fuente a partir de la detección de patrones. Son herramientas de referencia en la industria de desarrollo software, por ejemplo en las canalizaciones de integración continua, dado que permiten identificar estas vulnerabilidades en las fases tempranas del ciclo de vida del software. Por el contrario, hay estudios empíricos que muestran sus limitaciones en la precisión, cobertura, explicabilidad y unas altas tasas de positivos en sus reportajes \cite{aloraini-2019}. Por lo tanto, detectar estas vulnerabilidades asegurando una alta fiabilidad y utilidad sigue siendo un problema abierto.
 
 \section{Estado del arte}
-En el contexto de este trabajo profundizaremos en el análisis de vulnerabilidades relacionadas con la pila, o \textit{stack} y el montículo, también llamado \textit{heap}. Ambas son dos regiones de memoria relevantes en la estructura de los programas en tiempo de ejecución. Tanto en C como en C++, el manejo de estas dos estructuras es explicito, dicho de otra forma, se delega en el programador la gestión de la memoria del programa \cite{hertz-2005}. Expondremos el funcionamiento del montículo y de la pila, y posteriormente explicaremos las debilidades en el lenguaje C de estos segmentos de datos para comprender como pueden explotarse.
+En el contexto de este trabajo profundizaremos en el análisis de vulnerabilidades relacionadas con la pila de llamadas, también llamada pila o \textit{call stack} y el montículo, también llamado \textit{heap}. Ambas son dos regiones de memoria relevantes en la estructura de los programas en tiempo de ejecución. Tanto en C como en C++, el manejo de estas dos estructuras es explícito, dicho de otra forma, se delega en el programador la gestión de la memoria del programa \cite{hertz-2005}. Expondremos el funcionamiento del montículo y de la pila, y posteriormente explicaremos las debilidades en el lenguaje C de estos segmentos de datos para comprender como pueden explotarse.
 
-\subsection{El funcionamiento de la pila}
-En la pila se almacenan los datos relativos a la ejecución de las subrutinas de un programa. Cuando se realiza la llamada a una subrutina, se aloja dentro de la pila una nueva entrada, denominada marco de pila, o \textit{stack frame}, el cual contiene los parámetros de la subrutina, la dirección de retorno del contador de programa y sus variables locales.
+\subsection{El funcionamiento de la pila de llamadas}
+En la pila de llamadas se almacenan los datos relativos a las subrutinas de un programa. Cuando se realiza la llamada a una subrutina, se aloja dentro de la pila una nueva entrada denominada marco de pila, o \textit{stack frame}, el cual contiene los parámetros de la subrutina, la dirección de retorno del contador de programa y sus variables locales.
 
-La estrategia de gestión de datos que implementa la pila se basa en que la primera entrada que se desaloja es la última que se añadió, dicho de otra forma, la pila sigue la estrategia LIFO. Es por esto que conforme se ejecutan las subrutinas en un programa, las primeras que se alojan son las que se encuentran anidadas dentro de esta, y, consecuentemente, son estas las primeras que se liberan en la pila. Es por ello que, análogamente, su funcionamiento se asemeja al de una pila de libros, apilándose estos uno encima de otro y retirándolos desde el que se encuentra más arriba al que esta más abajo.
+La estrategia de gestión de datos que implementa la pila se basa en que la primera entrada que se desaloja es la última que se añadió, dicho de otra forma, la pila sigue la estrategia LIFO. Es por esto que conforme se ejecutan las subrutinas en un programa, las primeras que se alojan son las que se encuentran anidadas dentro de esta, y, consecuentemente, serán las las primeras que se liberen en la pila. Es por ello que, análogamente, su funcionamiento se asemeja al de una pila de libros, apilándose estos uno encima de otro y retirándolos desde el que se encuentra más arriba al que esta más abajo.
 
-En lo referente al funcionamiento a bajo nivel, el mecanismo de alojamiento de memoria en la pila se basa en el desplazamiento de un puntero de memoria hasta el bloque de direcciones que empieza tras el último marco de pila. Además, las instrucciones de ensamblador a las que traducen la mayoría de los compiladores las llamadas a subrutinas, son instrucciones especializadas; de forma que se disponen de métodos muy eficaces para realizar estas operaciones de aprovisionamiento en memoria.
+En lo referente al funcionamiento a bajo nivel, el mecanismo de alojamiento de memoria en la pila se basa en el desplazamiento de un puntero de memoria hasta el final del último marco de pila que se insertó. Además, el lenguaje ensamblador usa instrucciones especializadas para las llamadas a subrutinas. Los compiladores de lenguajes emplean múltiples técnicas con el fin de optimizar el uso de los recursos, como las instrucciones \textit{push} y \textit{pop}, para introducir y sacar datos de la pila respectivamente, es un ejemplo de este tipo de optimizaciones.
 
-Por otra parte, en el segmento de datos, la pila comparte la misma región de memoria que el montículo; con la particularidad de que los punteros de direcciones, que delimitan ambas regiones, crecen en sentidos opuestos. Por convención, en la mayoría de arquitecturas de computadores, la pila crece decrementando el puntero mientras que el montículo lo hace incrementándolo.
+Por otra parte, en el segmento de datos, la pila comparte la misma región de memoria que el montículo; con la particularidad de que los punteros de direcciones de ambos crecen en sentidos opuestos. En la mayoría de arquitecturas de computadores, se decide por convención que la pila crece decrementando el puntero mientras que el montículo lo hace incrementándolo. En la figura \ref{fig:estructura-memoria-proceso} se observa la estructura en memoria que ambas regiones comparten el mismo espacio de direcciones.
 
-Puesto que ambas estructuras coexisten en la misma región de memoria y crecen en sentidos opuestos, existe un limite de tamaño al cual pueden crecer ambas. Por esta limitación, se materializa el error por \textbf{desbordamiento de la pila}, y su aparición se da cuando en un programa se usa más memoria de la que tiene disponible en la pila de llamadas. En otros términos, ocurre cuando el puntero de la pila de llamadas excede el limite nominal de la pila.
+\begin{figure}[htpb]
+	\centering
+	\includegraphics[width=0.5\textwidth]{imagenes/estructura-memoria-proceso.png}
+	\caption{Estructura de memoria de un proceso C/C++. Extraída de \cite{chen-guo-cs225}}
+	\label{fig:estructura-memoria-proceso}
+\end{figure}
 
-%¿Deberíamos hacer alusión a cual es el tamaño de la región de memoria de la pila en el lenguaje C?%
+Puesto que ambas estructuras coexisten en la misma región de memoria y crecen en sentidos opuestos, existe un limite de tamaño al cual pueden crecer la pila, el montículo en cambio no tiene esa restricción. Esta diferencia de restricciones la expondremos más a fondo en la sección dedicada al montículo. Por lo pronto, la pila de llamadas tiene un tamaño nominal especifico según la plataforma de ejecución \cite{avd-2009}, dada esta restricción se desprende el error por \textbf{desbordamiento de la pila}, y su aparición se da cuando en un programa se usa más memoria de la que tiene disponible en la pila de llamadas. En otros términos, ocurre cuando el puntero de la pila de llamadas excede el tamaño límite.
+
+\subsubsection{Causas del desbordamiento de pila}
+Generalmente, los desbordamientos de pila pueden atribuirse a dos causas: la recursión y las variables excesivamente grandes.
+
+En el caso de la recursión, y obviando la recursión infinita, un desbordamiento de pila puede darse si el ritmo de crecimiento de la pila se acelera conforme aumenta la recursión es más profunda, dicho de otra forma, conforme se insertan nuevos \textit{frames}, estos contienen cada vez más datos que el anterior. Las funciones recursivas de gran profundidad pueden llevar a un desbordamiento de pila. Un ejemplo de este tipo de comportamientos puede verse en la figura \ref{fig:contenido-pila-programa-recurivo}.
+
+\begin{figure}[htpb]
+	\centering
+	
+	\label{fig:contenido-pila-programa-recursivo}
+	
+	
+\end{figure}
+
+Respecto a las variables excesivamente grandes, el tamaño de las variables se computa en tiempo de compilación, el desbordamiento puede darse si al calcular el tamaño de estas variables este excede el disponente en la pila.
+
+
 
 \subsection{El funcionamiento del montículo}
+
 
 \subsection{Identificación de CWEs en código de pila}
 
