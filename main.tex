@@ -60,7 +60,7 @@ El lenguaje de programación C es uno de los lenguajes más populares en la indu
 
 Sin embargo, las características que popularizaron a C también son el fondo detrás de una gestión insegura de la memoria intrínseca al lenguaje. Esta gestión insegura propicia la aparición de errores en el manejo de la memoria, que, además de ser difíciles de detectar, constituyen una de las superficies de ataque más persistentes en los lenguajes de programación \textit{memory-unsafe}.
 
-Los lenguajes de programación \textit{memory-unsafe} no cuentan, por defecto, con mecanismos de prevención de errores comunes de programación relacionados con la libertad en el acceso a memoria. Bajo esta libertad, el programador gestiona manualmente la memoria, pero esta libertad conlleva la aparición de distintos tipos de vulnerabilidades, entre las que figuran los desbordamientos de pila, las filtraciones de memoria y la corrupción de memoria
+Los lenguajes de programación \textit{memory-unsafe} no cuentan, por defecto, con mecanismos de prevención de errores comunes de programación relacionados con la libertad en el acceso a memoria. Bajo esta libertad, el programador gestiona manualmente la memoria, pero esta libertad conlleva la aparición de distintos tipos de vulnerabilidades, entre las que figuran los desbordamientos de pila, las filtraciones de memoria y la corrupción de memoria.
 
 Concretamente, las vulnerabilidades de corrupción de memoria constituyen el tipo de vulnerabilidad más frecuente. La sobre-escritura de metadatos del montículo, los punteros colgantes, las lecturas de memoria no inicializada, las liberaciones inválidas de memoria o la doble liberación de memoria son debilidades reconocidas por investigadores de seguridad y cuentan con sus respectivas técnicas de protección para abordarlas \cite{moghadam-2024}.
 
@@ -78,7 +78,7 @@ Expondremos el funcionamiento de ambas, y posteriormente explicaremos sus  debil
 \subsection{El funcionamiento de la pila de llamadas}
 En la pila de llamadas (\textit{stack call}) se almacenan los datos relativos a las subrutinas de un programa. Cuando se invoca una subrutina, se crea en la pila un nuevo marco \textit{stack frame}, que contiene sus parámetros, la dirección de retorno y sus variables locales. Al finalizar la subrutina, su marco se libera.
 
-La pila sigue una estrategia LIFO (\textit{last in, first out}): el último marco en crearse es el primero en destruirse. Por ello, las subrutinas más anidadas (las llamadas más recientes) son las últimas en alojarse pero las primeras en liberarse, de forma análoga a una pila de libros donde solo se puede retirar el libro de la cima.
+La pila sigue una estrategia LIFO (\textit{last in, first out}): el último marco en crearse es el primero en destruirse. Por ello, las subrutinas más anidadas (las llamadas más recientes) son las últimas en asignarse pero las primeras en liberarse, de forma análoga a una pila de libros donde solo se puede retirar el libro de la cima.
 
 %La estrategia de gestión de datos que implementa la pila se basa en que la primera entrada que se desaloja es la última que se añadió, dicho de otra forma, la pila sigue la estrategia LIFO. Es por esto que conforme se ejecutan las subrutinas en un programa, las primeras que se alojan son las que se encuentran anidadas dentro de esta, y, consecuentemente, serán las las primeras que se liberen en la pila. Es por ello que, análogamente, su funcionamiento se asemeja al de una pila de libros, apilándose estos uno encima de otro y retirándolos desde el que se encuentra más arriba al que esta más abajo.
 
@@ -90,8 +90,8 @@ La gestión de la pila se realiza mediante un puntero de pila. Al insertar un nu
 \subsection{El funcionamiento del montículo (\textit{heap})}
 El montículo (heap) es una región de memoria dinámica; es decir, los datos almacenados en él se asignan durante el tiempo de ejecución del programa. A diferencia de la pila, los datos del montículo deben gestionarse manualmente. 
 
-La gestión manual de la memoria comprende dos operaciones fundamentales: la petición y la liberación de bloques de memoria. Para solicitar un bloque de un número especifico de bytes, se emplean las funciones \texttt{malloc} o \texttt{calloc}, que devuelven un puntero al inicio del bloque asignado.
-La liberación se realiza mediante la función \texttt{free}, a la que se proporciona como argumento el puntero del bloque que se desea liberar. 
+La gestión manual de la memoria comprende dos operaciones fundamentales: la petición y la liberación de bloques de memoria. Para solicitar un bloque de un número especifico de bytes, se emplean las funciones \texttt{malloc()} o \texttt{calloc()}, que devuelven la dirección de memoria del bloque asignado.
+La liberación se realiza mediante la función \texttt{free()}, a la que se proporciona como argumento la dirección del bloque que se desea liberar. 
 % Ambas operaciones interactúan con el administrador de memoria del entorno de ejecución, el cual puede solicitar memoria al sistema operativo en bloques mayores para optimizar el rendimiento \cite{amini-2019}.
 
 Al delegar la gestión de la memoria en el programador, los errores aparecen con una frecuencia mucho mayor. Uno de los más característicos son las \textbf{fugas de memoria} (memory leaks), que ocurren cuando no se libera un bloque de memoria tras cumplir su utilidad. En casos severos, puede llevar al agotamiento de los recursos (especialmente en dispositivos con capacidades limitadas), lo que puede derivar en una denegación de servicio \cite{cal-2002}.
@@ -112,57 +112,128 @@ Dentro de un proceso, la pila y el montículo comparten la misma región de memo
 %Puesto que ambas estructuras coexisten en la misma región de memoria, existe un limite de tamaño al cual pueden crecer la pila, no teniendo el montículo esa restricción. Esta diferencia de restricciones la expondremos más a fondo en la sección dedicada al montículo. Por lo pronto, la pila de llamadas tiene un tamaño nominal específico según la plataforma de ejecución \cite{avd-2009}, y dada esta restricción se desprende el error por \textbf{desbordamiento de la pila}. Su aparición se da cuando en un programa se usa más memoria de la que tiene disponible en la pila de llamadas. En otros términos, ocurre cuando el puntero de la pila de llamadas excede el tamaño límite.
 
 \subsection{CWEs de la pila de llamadas}
-Las debilidades recogidas en el catalogo CWE son fallos estandarizados conocidos por causar vulnerabilidades. En este apartado detallamos 5 fallos asociados a la pila de llamadas.
+Las debilidades que vamos a tratar se recogen en el catalogo CWE (\textit{Common Weakness Enumeration}) de MITRE, el cual contiene fallos estandarizados conocidos por causar vulnerabilidades. Tanto la gestión de la pila, como la región de memoria en sí, tienen asociadas múltiples debilidades, de forma que en este artículo recogemos las ocho más relevantes para el propósito de nuestro estudio.
+
+\begin{itemize}
+	\item \textbf{CWE-121: Desbordamiento del búfer en la pila}. Ocurre cuando se escribe más allá de los límites de un búfer asignado en la pila. Pudiendo corromper datos en marcos adyacentes, como variables o direcciones de retorno, y potencialmente permitir la ejecución de código arbitrario \cite{mitre-cwe-121}.
+	%En la figura \ref{} puede verse 
+	
+	\item \textbf{CWE-562: Devolución de puntero de pila}. Ocurre cuando una función devuelve un puntero a una variable local. Al finalizar la ejecución de dicha función, su marco de pila se destruye y todas las referencia a las variables locales que contenía quedan invalidadas. Por tanto, el puntero devuelto apunta a una región de memoria ya desasignada, cuyo uso posterior constituye un comportamiento indefinido y potencialmente explotable \cite{mitre-cwe-562}.
+	
+	\item \textbf{CWE-628: Llamada a función con argumentos especificados incorrectamente}. Constituye una categoría base de vulnerabilidades de las cual se desglosan varias vulnerabilidades hijas. Entre las vulnerabilidades hijas podemos encontrar tres específicas de la pila de llamadas.
+	\subitem \textbf{CWE-683: Llamada a función con argumentos en orden incorrecto}.
+	\subitem \textbf{CWE-685: Llamada a función con número incorrecto de argumentos}.
+	\subitem \textbf{CWE-688: Llamada a función con una variable o referencia incorrecta como argumento}.
+	
+	\item \textbf{CWE-674: Recursión no controlada}. Se da en el caso de una función recursiva la cual carece de un caso base adecuado o de un límite en su profundidad, lo que lleva a un consumo masivo de memoria de pila (\textit{stack memory}) y al agotamiento de su espacio.
+	
+	%\item \textbf{CWE-789: Asignación de memoria con tamaño excesivo}. Ocurre cuando se asignan datos en memoria basándose en un tamaño proporcionado por un atacante, lo que puede llevar a un agotamiento de la misma. Puede ocurrir cuando los datos se obtienen de orígenes que no son de confianza y sobre los que no se comprueban los límites esperados \cite{mitre-cwe-789}.
+	
+	\item \textbf{CWE-835: Bucle con condición de salida inalcanzable}. Se da cuando el programa entra en un bucle infinito, lo que lleva a un agotamiento de la pila. Un ejemplo puede ser un bucle \texttt{while(true)} sin una instrucción \texttt{break}.
+	
+	% \item \textbf{CWE-1325: Control inadecuado en la asignación de memoria secuencial}. Ocurre cuando no se controla el espacio consumido al asignar variables con la función \texttt{alloca()}, la cual almacena los datos directamente en el marco de pila \cite{mitre-cwe-1325}.
+\end{itemize}
+% Las debilidades recogidas en el catalogo CWE son fallos estandarizados conocidos por causar vulnerabilidades. En este apartado detallamos 5 fallos asociados a la pila de llamadas.
 
 
-\subsection{Causas del desbordamiento de pila}
-Generalmente, los desbordamientos de pila pueden atribuirse a dos causas, aquellos que tienen que se deben a función recursiva, que debido a la cantidad de datos que aloja con sus llamadas agota el espacio de la pila; y aquellos se dan al intentar almacenar variables excesivamente grandes en la pila.
+%\subsection{Causas del desbordamiento de pila}
+%Generalmente, los desbordamientos de pila pueden atribuirse a dos causas, aquellos que tienen que se deben a función recursiva, que debido a la cantidad de datos que aloja con sus llamadas agota el espacio de la pila; y aquellos se dan al intentar almacenar variables excesivamente grandes en la pila.
 
 %% Esto es una mierda
 % La recursión infinita carece de caso base, sabemos que tecnicamente, al no finalizar nunca, 
-Las funciones recursivas son aquellas funciones que se llaman a si mismas dentro de su propio código, estas funciones para evitar llamadas infinitas cuentan con un caso base, que es una condición que al cumplirse detiene las llamadas recursivas. Aunque hacemos enfasís 
+%Las funciones recursivas son aquellas funciones que se llaman a si mismas dentro de su propio código, estas funciones para evitar llamadas infinitas cuentan con un caso base, que es una condición que al cumplirse detiene las llamadas recursivas. Aunque hacemos enfasís 
 
-Un desbordamiento de pila puede deberse en una función recurvis. El primero es que haya una profundidad excesiva de llamadas, aunque todos los marcos contengan la misma cantidad de datos; y segundo, que haya un crecimiento en el tamaño de los marcos con la profundidad (por ejemplo, cuando cada marco nuevo contiene estructuras de datos de mayor tamaño que las anteriores), acelerándose así el ritmo de consumo de la pila. En ambos casos, tanto en funciones recursivas con casos base lejanos, como con marcos de tamaño creciente, se puede producir un desbordamiento. En la figura \ref{fig:contenido-pila-programa-recursivo} puede verse un ejemplo de funciones recursivas en las que el tamaño del marco crece conforme aumenta la profundidad.
+%Un desbordamiento de pila puede deberse en una función recurvis. El primero es que haya una profundidad excesiva de llamadas, aunque todos los marcos contengan la misma cantidad de datos; y segundo, que haya un crecimiento en el tamaño de los marcos con la profundidad (por ejemplo, cuando cada marco nuevo contiene estructuras de datos de mayor tamaño que las anteriores), acelerándose así el ritmo de consumo de la pila. En ambos casos, tanto en funciones recursivas con casos base lejanos, como con marcos de tamaño creciente, se puede producir un desbordamiento. En la figura \ref{fig:contenido-pila-programa-recursivo} puede verse un ejemplo de funciones recursivas en las que el tamaño del marco crece conforme aumenta la profundidad.
 
 %Obviando la recursión infinita, dado que no es posible en un sistema con recursos finitos, nos centraremos en la recursión finita. En estos terminos, un desbordamiento de pila puede darse si el ritmo de crecimiento de la pila se acelera conforme aumenta el nivel de profundidad; dicho de otro modo, conforme se insertan nuevos marcos, estos contienen cada vez más datos que el anterior. Las funciones recursivas de gran profundidad pueden llevar a un desbordamiento de pila. Un ejemplo de este tipo de comportamientos puede verse en la figura \ref{fig:contenido-pila-programa-recursivo}.
 
-\begin{figure}[htpb]
-	\centering
-	\begin{minipage}{.45\columnwidth}
-		\begin{lstlisting}
-			int pow(int base, int exp) {
-				if (exp > 0) {
-					return base * pow(base, exp - 1);
-				} else {
-					return 1;
-				}
-			}	
-		\end{lstlisting}
-	\end{minipage}
-	\hfill
-	\begin{minipage}{.45\columnwidth}
-		\begin{lstlisting}
-			pow(5, 4)
-			5 * pow(5, 3)
-			5 * (5 * pow(5, 2))
-			5 * (5 * (5 * pow(5, 1)))
-			5 * (5 * (5 * (5 * pow(5, 0))))
-			5 * (5 * (5 * (5 * 1)))
-			625
-		\end{lstlisting}
-	\end{minipage}
-	\caption{A la izquierda se tiene el código fuente, a la derecha, el contenido de la pila en el nivel más profundo de recursión. En este caso, el calculo se expande según se profundiza. En situaciones de recursividad muy profunda, aumenta el riesgo de desbordamiento de pila por agotamiento de espacio. Ejemplo extraído de Wikipedia \cite{enwiki:1351011401}.}
-	\label{fig:contenido-pila-programa-recursivo}
-\end{figure}
+%\begin{figure}[htpb]
+%	\centering
+%	\begin{minipage}{.45\columnwidth}
+%		\begin{lstlisting}
+%			int pow(int base, int exp) {
+%				if (exp > 0) {
+%					return base * pow(base, exp - 1);
+%				} else {
+%					return 1;
+%				}
+%			}	
+%		\end{lstlisting}
+%	\end{minipage}
+%	\hfill
+%	\begin{minipage}{.45\columnwidth}
+%		\begin{lstlisting}
+%			pow(5, 4)
+%			5 * pow(5, 3)
+%			5 * (5 * pow(5, 2))
+%			5 * (5 * (5 * pow(5, 1)))
+%			5 * (5 * (5 * (5 * pow(5, 0))))
+%			5 * (5 * (5 * (5 * 1)))
+%			625
+%		\end{lstlisting}
+%	\end{minipage}
+%	\caption{A la izquierda se tiene el código fuente, a la derecha, el contenido de la pila en el nivel más profundo de recursión. En este caso, el calculo se expande según se profundiza. En situaciones de recursividad muy profunda, aumenta el riesgo de desbordamiento de pila por agotamiento de espacio. Ejemplo extraído de Wikipedia \cite{enwiki:1351011401}.}
+%	\label{fig:contenido-pila-programa-recursivo}
+%\end{figure}
 
-El tamaño de las variables se calcula en tiempo de compilación. Las colecciones de datos excesivamente grandes pueden provocar errores por agotamiento del espacio disponible. En la figura se dispone de un ejemplo susceptible de agotar el espacio de la pila.
-
-
+%El tamaño de las variables se calcula en tiempo de compilación. Las colecciones de datos excesivamente grandes pueden provocar errores por agotamiento del espacio disponible. En la figura se dispone de un ejemplo susceptible de agotar el espacio de la pila.
 
 \subsection{CWEs del montículo}
+Hay muchos CWEs recogidos que pueden asociarse al montículo, de forma que para nuestro estudio hemos realizado un listado con sus ocho debilidades más relevantes.
+
+\begin{itemize}
+	\item \textbf{CWE-122: Desbordamiento del búfer en el montículo}. Ocurre cuando en un bloque de memoria se escribe escriben más datos de los que caben, de forma que compromete la memoria adyacente y puede derivar en la ejecución de código arbitrario.
+	
+	%\item \textbf{CWE-193: Error por uno (\textit{Off-by-one error})}. Ocurre cuando la comprobación de una condición lógica se realiza de manera incorrecta, desviándose en una unidad por exceso o defecto. Es frecuente al especificar la condición de salida en bucles iterativos, especialmente en lenguajes de programación cuya indexación comienza en cero en lugar de uno (como es el caso de C/C++) \cite{mitre-cwe-193}.
+	
+	\item \textbf{CWE-244: Limpieza incorrecta de la memoria antes de su liberación (\textit{Heap Inspection})}.
+	Ocurre cuando se libera un bloque de memoria (ya sea explícitamente con \texttt{free()} o implícitamente con \texttt{realloc()}) sin sobrescribir previamente los datos sensibles que contenía. En particular, cuando \texttt{realloc()} necesita reubicar el bloque en una nueva dirección copia su contenido, libera el bloque original y lo deja intacto en el \textit{heap}, aunque inaccesible para el programa. Un atacante que pueda leer volcados de memoria o direcciones liberadas y podría recuperar dichos datos \cite{mitre-cwe-244}.
+		
+	\item \textbf{CWE-401: Filtraciones de memoria}.
+	
+	
+	\item \textbf{CWE-415: Doble liberación}. Se da cuando se llama a la función \texttt{free()} dos veces sobre la misma dirección de memoria. Esto corrompe la estructura del montículo y puede derivar en fallos inesperados o comportamiento impredecible; en escenarios controlados por un atacante, puede posibilitar ataques de uso tras liberación (\textit{use-after-free}),  que a su vez permiten ejecutar código arbitrario o escalar privilegios \cite{mitre-cwe-415}.
+	\subitem \textbf{CWE-416: Uso tras la liberación (\textit{Use-After-Free})}. Ocurre cuando se accede a una región de memoria tras haber sido liberada, sin que el puntero haya sido reasignado o puesto a \texttt{NULL}. Esto provoca que un atacante pueda reutilizar un bloque de memoria liberado, lo que le permite llevar a cabo los ataques previamente descritos \cite{mitre-cwe-416}.
+	
+	\item \textbf{CWE-476: Desreferencia de puntero nulo}. Ocurre cuando se emplea un puntero bajo la expectativa de que contenga una referencia a una dirección de memoria valida; no obstante, el puntero contiene una referencia a \texttt{NULL}, lo que provoca un fallo en el proceso. En circunstancias excepcionales, cuando \texttt{NULL} apunta a la dirección de memoria \texttt{0x0} y el código privilegiado puede acceder a ella, de forma que es posible leer o escribir en dicha memoria, puede derivar en la ejecución de código arbitrario \cite{mitre-cwe-476}.
+	
+	\item \textbf{CWE-590: Liberación de memoria no asignada en el montículo}. Ocurre cuando se llama a la función \texttt{free()} con un puntero de memoria no asignado en el montículo. Al liberar un puntero inválido, pueden corromperse el manejo de las estructuras de datos de memoria, lo que provoca fallos en el programa. En el caso de un ataque, un atacante puede usar la función \texttt{free()} para realizar operaciones en memoria de forma que le permitan modificar controles críticos o ejecutar código arbitrario \cite{mitre-cwe-590}.
+	
+	\item \textbf{CWE-761: Liberación de puntero no situado al inicio del búfer}. Ocurre cuando se llama a la función \texttt{free()} con una dirección de memoria asignada en el montículo, pero que no está al inicio del búfer, lo que provoca un fallo en el programa \cite{mitre-cwe-761}.
+\end{itemize}
+
+\subsection{CWEs que afectan tanto a la pila de llamadas como al montículo}
+Las vulnerabilidades recogidas en este apartado se encuentran asociadas tanto a la pila de llamadas como al montículo, por lo que les hemos dedicado un apartado propio. Las vulnerabilidades asociadas al búfer son muy comunes, por lo que no es de extrañar que tengan mucha prevalencia en el análisis de vulnerabilidades. % REVISAR ESTA MIERDA
+
+\begin{itemize}
+\item \textbf{CWE-123: Escribir lo que sea, donde sea (\textit{Write-what-where})}
+
+\item \textbf{CWE-125: Lectura fuera de los limites del búfer}. Ocurre cuando se realiza una lectura de los datos fuera de las direcciones del búfer. De esta debilidad se desglosan otras dos vulnerabilidades hijas:
+\subitem \textbf{CWE-126: Lectura de datos más allá del búfer}
+\subitem \textbf{CWE-127: Lectura de datos atrás del búfer}
+
+\item \textbf{CWE 680: Desbordamiento de entero que desemboca en desbordamiento de búfer}	
+
+\end{itemize}
+
 
 
 \section{Metodología de análisis}
+
+Splint fue diseñado para detectar problemas como:
+
+Desbordamientos de búfer clásicos (CWE-120)
+
+Uso de memoria no inicializada
+
+Pérdidas de memoria
+
+Violaciones de tipos
+
+
+
+ASPECTO MUY IMPORTANTE - EL CODIGO NO CUENTA CON ANOTACIONES O CONTRATOS [POR LO QUE LA EFECTIVIDAD DE SPLINT ES REALMENTE BAJA]
+
 
 \section{Entrenamiento del gran modelo de lenguaje}
 
