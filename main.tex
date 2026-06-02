@@ -9,11 +9,10 @@
 \usepackage{amssymb}
 \usepackage{float}
 \usepackage{titlesec}
+\usepackage{float}
 \usepackage{listings, lstautogobble}
-\usepackage[
-backend=biber,
-sorting=none
-]{biblatex}
+\usepackage[backend=biber, sorting=none]{biblatex}
+\addbibresource{bibliography.bib}
 
 \definecolor{RoyalBlue}{cmyk}{1, 0.50, 0, 0}
 
@@ -30,7 +29,7 @@ rulecolor=\color{black},
 autogobble=true
 }
 
-\addbibresource{bibliography.bib}
+
 
 \begin{document}
 \cleardoublepage
@@ -112,6 +111,7 @@ Dentro de un proceso, la pila y el montículo comparten la misma región de memo
 %Puesto que ambas estructuras coexisten en la misma región de memoria, existe un limite de tamaño al cual pueden crecer la pila, no teniendo el montículo esa restricción. Esta diferencia de restricciones la expondremos más a fondo en la sección dedicada al montículo. Por lo pronto, la pila de llamadas tiene un tamaño nominal específico según la plataforma de ejecución \cite{avd-2009}, y dada esta restricción se desprende el error por \textbf{desbordamiento de la pila}. Su aparición se da cuando en un programa se usa más memoria de la que tiene disponible en la pila de llamadas. En otros términos, ocurre cuando el puntero de la pila de llamadas excede el tamaño límite.
 
 \subsection{CWEs de la pila de llamadas}
+\label{sec:cwe-stack}
 Las debilidades que vamos a tratar se recogen en el catalogo CWE (\textit{Common Weakness Enumeration}) de MITRE, el cual contiene fallos estandarizados conocidos por causar vulnerabilidades. Tanto la gestión de la pila, como la región de memoria en sí, tienen asociadas múltiples debilidades, de forma que en este artículo recogemos las ocho más relevantes para el propósito de nuestro estudio.
 
 \begin{itemize}
@@ -179,6 +179,7 @@ Las debilidades que vamos a tratar se recogen en el catalogo CWE (\textit{Common
 %El tamaño de las variables se calcula en tiempo de compilación. Las colecciones de datos excesivamente grandes pueden provocar errores por agotamiento del espacio disponible. En la figura se dispone de un ejemplo susceptible de agotar el espacio de la pila.
 
 \subsection{CWEs del montículo}
+\label{sec:cwe-heap}
 Hay muchos CWEs recogidos que pueden asociarse al montículo, de forma que para nuestro estudio hemos realizado un listado con sus ocho debilidades más relevantes.
 
 \begin{itemize}
@@ -189,8 +190,8 @@ Hay muchos CWEs recogidos que pueden asociarse al montículo, de forma que para 
 	\item \textbf{CWE-244: Limpieza incorrecta de la memoria antes de su liberación (\textit{Heap Inspection})}.
 	Ocurre cuando se libera un bloque de memoria (ya sea explícitamente con \texttt{free()} o implícitamente con \texttt{realloc()}) sin sobrescribir previamente los datos sensibles que contenía. En particular, cuando \texttt{realloc()} necesita reubicar el bloque en una nueva dirección copia su contenido, libera el bloque original y lo deja intacto en el \textit{heap}, aunque inaccesible para el programa. Un atacante que pueda leer volcados de memoria o direcciones liberadas y podría recuperar dichos datos \cite{mitre-cwe-244}.
 		
-	\item \textbf{CWE-401: Filtraciones de memoria}.
-	
+	\item \textbf{CWE-401: Filtraciones de memoria (\textit{Memory Leaks})}.
+	Ocurre cuando un bloque de memoria no es liberado después de haber cumplido su función, lo que provoca su acumulación y la imposibilidad de reutilizarlo para otros fines. Cuando el problema persiste de manera sistémica, pueden producirse acumulaciones masivas de memoria. En este escenario, un atacante podría explotar esta debilidad para causar una denegación de servicio (\textit{DoS}, en inglés \textit{Denial of Service}) \cite{mitre-cwe-401}.
 	
 	\item \textbf{CWE-415: Doble liberación}. Se da cuando se llama a la función \texttt{free()} dos veces sobre la misma dirección de memoria. Esto corrompe la estructura del montículo y puede derivar en fallos inesperados o comportamiento impredecible; en escenarios controlados por un atacante, puede posibilitar ataques de uso tras liberación (\textit{use-after-free}),  que a su vez permiten ejecutar código arbitrario o escalar privilegios \cite{mitre-cwe-415}.
 	\subitem \textbf{CWE-416: Uso tras la liberación (\textit{Use-After-Free})}. Ocurre cuando se accede a una región de memoria tras haber sido liberada, sin que el puntero haya sido reasignado o puesto a \texttt{NULL}. Esto provoca que un atacante pueda reutilizar un bloque de memoria liberado, lo que le permite llevar a cabo los ataques previamente descritos \cite{mitre-cwe-416}.
@@ -203,36 +204,145 @@ Hay muchos CWEs recogidos que pueden asociarse al montículo, de forma que para 
 \end{itemize}
 
 \subsection{CWEs que afectan tanto a la pila de llamadas como al montículo}
-Las vulnerabilidades recogidas en este apartado se encuentran asociadas tanto a la pila de llamadas como al montículo, por lo que les hemos dedicado un apartado propio. Las vulnerabilidades asociadas al búfer son muy comunes, por lo que no es de extrañar que tengan mucha prevalencia en el análisis de vulnerabilidades. % REVISAR ESTA MIERDA
+\label{sec:cwe-common}
+Las vulnerabilidades recogidas en este apartado se encuentran asociadas tanto a la pila de llamadas como al montículo, por lo que les hemos dedicado un apartado propio. Estas vulnerabilidades comparten una debilidad común, el desbordamiento de búfer, de forma que aprovechan las características de este tipo de vulnerabilidad para explotarla por otros métodos, como veremos a continuación. Recogemos un total de cinco vulnerabilidades más.
 
 \begin{itemize}
-\item \textbf{CWE-123: Escribir lo que sea, donde sea (\textit{Write-what-where})}
+\item \textbf{CWE-123: (\textit{Write-what-where})}. Esta vulnerabilidad consiste en cualquier condición que permite a un atacante escribir un valor arbitrario en una dirección de memoria también arbitraria. Este escenario es frecuente en el caso de los desbordamientos de búfer, ya que, al escribir datos que exceden el tamaño del búfer reservado, se pueden sobrescribir posiciones de memoria, lo que permite la ejecución de código arbitrario o la subversión de las medidas de seguridad \cite{mitre-cwe-123}.
 
 \item \textbf{CWE-125: Lectura fuera de los limites del búfer}. Ocurre cuando se realiza una lectura de los datos fuera de las direcciones del búfer. De esta debilidad se desglosan otras dos vulnerabilidades hijas:
 \subitem \textbf{CWE-126: Lectura de datos más allá del búfer}
 \subitem \textbf{CWE-127: Lectura de datos atrás del búfer}
 
-\item \textbf{CWE 680: Desbordamiento de entero que desemboca en desbordamiento de búfer}	
-
+\item \textbf{CWE 680: Desbordamiento de entero que conduce a desbordamiento de búfer}. Esta vulnerabilidad ocurre cuando, al calcular el tamaño de un búfer, resultado de una operación aritmética supera el valor máximo representable por el tipo entero utilizado. En consecuencia, el búfer asignado tiene una capacidad menor a la esperada, lo que provoca un desbordamiento de búfer la intentar escribir en el más datos de los que puede albergar \cite{mitre-cwe-680}. 
 \end{itemize}
 
 
 
 \section{Metodología de análisis}
+\subsection{Contextualización}
+La metodología de análisis que empleamos se basa en el análisis comparativo. Su objetivo es detectar debilidades en el código fuente. Con tal fin, recopilamos los resultados del análisis de vulnerabilidades empleando dos tipologías de herramientas: los analizadores de código estático (\textit{SAST}, del inglés \textit{Static Application Security Testing}) y los modelos de lenguaje de gran tamaño (LLM, del inglés \textit{Large Language Model}).
 
-Splint fue diseñado para detectar problemas como:
+La detección de estas vulnerabilidades la realizamos sobre código fuente escrito exclusivamente en el lenguaje de programación C. Para tal fin, escogimos \textbf{Splint}, una herramienta estándar para el análisis estático de programas en C. Existen diversos tipos de herramientas de análisis estático, entre las cuales se encuentran los \textit{linter}. Según la definición de Sonar, los \textit{linter} analizan el código estático para identificar y señalar problemas que pueden derivar en errores, vulnerabilidades y \textit{code smells} \cite{sonarsource-2024}. En esencia, estas herramientas buscan patrones en el código que correspondan a errores conocidos, defectos, problemas de estilo o de arquitectura. Splint es una herramienta que pertenece a esta categoría.
 
-Desbordamientos de búfer clásicos (CWE-120)
+La principal debilidad de los analizadores de código estático es su elevada tasa de falsos positivos. Esto se debe a que estas herramientas operan con una carencia de contexto, dado que disponen de una cantidad muy limitada de información sobre el código analizado. La detección de vulnerabilidades y errores se basa en reglas heurísticas. Cuando dichas reglas son ambiguas, múltiples patrones se señalan como positivos aún cuando el código es valido o la alerta es incorrecta. Por otro lado, si las reglas son demasiado estrictas, pueden generar falsos positivos que no se corresponden con la vulnerabilidad central, sin ofrecer una solución al problema de raíz \cite{holden2024code}.
 
-Uso de memoria no inicializada
+En contraste, los \textit{LLM} no presentan esa carencia en contexto, dado que fueron entrenados con conjuntos de datos masivos, lo que les permite aprender patrones, estructuras y comportamientos tanto de vulnerabilidades comunes como nuevas \cite{gladkikh-et-al-2025}. Estudios recientes demuestran que determinados modelos logran una alta precisión en la clasificación de código vulnerable, superando a otras arquitecturas en esta métrica. Sin embargo, en el contexto actual no se plantean como sustitutas, sino como integraciones dentro de \textit{SAST} de forma que mejoran su rendimiento en escenarios específicos \cite{SANTASCIAVATTA2026}.
 
-Pérdidas de memoria
+Para evaluar el rendimiento de los modelos de lenguaje en detección de vulnerabilidades, seleccionaremos cinco modelos ampliamente utilizados en el dominio de la programación. A continuación, analizaremos los casos de prueba pertenecientes a un conjunto de datos previamente seleccionado, utilizando tanto la herramienta Splint como los modelos mencionados. Finalmente, se comparan los resultados obtenidos con el fin de determinar si, en este contexto, los LLM superan, igualan o presentan un rendimiento inferior al de Splint.
 
-Violaciones de tipos
+\subsection{Conjunto de datos empleado}
+El conjunto de datos que empleamos es la suite de pruebas Juliet. Es un conjunto, desarrollado por el Centro de Software Confiable (\textit{CAS}, del inglés \textit{Center for Assured Software}) de la NSA (\textit{National Security Agency}), el cual contiene referencias para la evaluación de herramientas de análisis estático de seguridad.
+
+En todos los casos de prueba se distinguen tres secciones.
+\begin{enumerate}
+	\item Una sección \textit{bad}. La cual contiene código vulnerable que presenta un CWE específico.
+	
+	\item Una sección \textit{good}. La cual contiene código seguro. Este código es el código vulnerable al cual se le incorpora un \textit{fix} para solucionar la debilidad del caso vulnerable.
+	
+	\item Una sección \textit{main}. Que permite la ejecución tanto del código vulnerable como del código seguro.
+\end{enumerate}
+
+La ejecución tanto del caso vulnerable como del caso seguro puede controlarse según dos macros \texttt{OMITGOOD} y \texttt{OMITBAD}. Según cual se defina se omitirá la sección segura o la  vulnerable, respectivamente.
+
+Para nuestro análisis seleccionamos la suite Juliet C/C++ en su versión 1.3, la cual recoge más de 64.000 casos de prueba para 118 \textit{CWE} distintos \cite{samate-nist}. Dentro del \textit{corpus} de pruebas escogimos únicamente aquellos casos en C y relativos a las debilidades expuestas desde el apartado \ref{sec:cwe-stack} al apartado \ref{sec:cwe-common} de este trabajo.
+
+\section{Resultados de análisis con Splint}
+\subsection{Exposición de la tabla-matriz de confusión}
+En la figura \ref{fig:resultados-cwe-splint} exponemos los resultados obtenidos. Se expone en una tabla en la cual se presenta la matriz de confusión de cada uno de los tipos de vulnerabilidades en formato fila. A continuación se expone una leyenda del significado de cada una de las columnas de la matriz de confusión.
+\begin{itemize}
+	\item Verdadero positivo (VP). El el análisis de un caso \textit{bad} para el cual Splint \textbf{advierte} que existe la vulnerabilidad en concreto.
+	
+	\item Verdadero negativo (VN). Es el análisis de un caso \textit{good} para el cual Splint \textbf{no advierte} que existe la vulnerabilidad en concreto.
+	
+	\item Falso positivo (FP). Es el análisis de un caso \textit{good} para el cual Splint \textbf{advierte} que existe la vulnerabilidad en concreto.
+	
+	\item Falso negativo (FN). Es el análisis de un caso \textit{bad} para el cual Splint \textbf{no advierte} que existe la vulnerabilidad en concreto.
+\end{itemize}
+
+\raggedbottom
+
+\vspace*{\fill}
+\begin{figure}[H]
+	\centering
+	\begin{tabular}{|l|l|l|l|l|l|l|}
+		\hline
+		Debilidad & Nº casos de prueba & \multicolumn{1}{l|}{Nº de pruebas realizas} & \multicolumn{1}{l|}{VP} & \multicolumn{1}{l|}{VN} & \multicolumn{1}{l|}{FP} & \multicolumn{1}{l|}{FN} \\ \hline
+		CWE-121 & 5906 & 11812 & 4183 & 1723 & 4183 & 1723 \\
+		\hline
+		CWE-122 & 3656 & 7312 & 2158 & 1498 & 2158 & 1498 \\
+		\hline
+		CWE-123 & 168 & 336 & 150 & 18 & 150 & 18 \\
+		\hline
+		CWE-124 & 1896 & 3792 & 1347 & 549 & 1347 & 549 \\
+		\hline
+		CWE-126 & 1380 & 2760 & 945 & 435 & 945 & 435 \\
+		\hline
+		CWE-127 & 1896 & 3792 & 1222 & 674 & 1222 & 674 \\
+		\hline
+		CWE-401 & 1228 & 2456 & 600 & 628 & 600 & 628 \\
+		\hline
+		CWE-415 & 336 & 672 & 246 & 90 & 246 & 90 \\
+		\hline
+		CWE-416 & 150 & 300 & 132 & 18 & 132 & 18 \\
+		\hline
+		CWE-476 & 372 & 744 & 238 & 134 & 238 & 134 \\
+		\hline
+		CWE-562 &  2  &  4  &  0  &  2  &  0  &  2 \\
+		\hline
+		CWE-674 &  2  &  4  &  0  &  2  &  0  &  2 \\
+		\hline
+		CWE-680 & 336 & 672 & 117 & 219 & 117 & 219 \\
+		\hline
+		CWE-685 &  18  &  36  &  18  &  0  &  18  &  0 \\
+		\hline
+		CWE-688 &  18  &  36  &  18  &  0  &  18  &  0 \\
+		\hline
+		CWE-761 & 672 & 1344 & 536 & 136 & 536 & 136 \\
+		\hline
+		CWE-835 & 6 & 12 & 0 & 6 & 0 & 6 \\
+		\hline
+		\hline
+		\multicolumn{7}{|c|}{\textbf{Total de casos de prueba: 18.192 (pruebas realizadas: 36.384)}} \\
+		\hline
+	\end{tabular}
+	\caption{Resultados obtenidos de análisis de \textit{CWE} con la herramienta Splint}
+	\label{fig:resultados-cwe-splint}
+\end{figure}
+\vspace*{\fill}
+
+\newpage
+
+\subsection{Análisis de los resultados}
+Se observa un patrón recurrente en todos los casos: los falsos positivos coinciden con los verdaderos positivos, mientras que los falsos negativos coinciden con los verdaderos negativos.
+Ello se debe a que, cuando la herramienta detecta una vulnerabilidad en el código, la identifica tanto en la prueba que contiene únicamente código vulnerable como en aquella que presenta código seguro. Esta situación es consecuencia de que las modificaciones introducidas en los casos de prueba para tornar el código seguro consisten en cambios de una sola línea o en la modificación de una asignación de variable. Por consiguiente, Splint genera una cantidad considerable de falsos positivos en contextos en los que, propiamente, no existen vulnerabilidades.
+
+% Es posible observar que en todos los casos se repite un patrón: los falsos positivos coinciden con los verdaderos positivos, y los falsos negativos coinciden con los verdaderos negativos. Esto se debe a que cuando encuentra una vulnerabilidad en el código, la detecta tanto en la prueba que solo se encuentra el código vulnerable como la prueba en la que se encuentra el código seguro. Esto se debe a que las modificaciones que se realiza en los casos de prueba para hacer el código seguro consiste en modificaciones de una sola linea o un cambio de asignación de variable, por lo que Splint acaba marcando una gran cantidad de falsos positivos dónde debidamente no existen.
+
+\subsubsection{El reporte de vulnerabilidades}
+En el proceso de reporte de vulnerabilidades mediante la herramienta Splint, analizamos las salidas en busca de palabras clave ()\textit{keywords}) que permitieran identificar fallos de seguridad. Cabe resaltar que Splint no posee la capacidad de detectar debilidades específicas, sino que es una herramienta especializada en la identificación de problemas como desbordamientos de búfer, usos de memoria no inicializada, pérdidas de memoria y violaciones de tipos.
+
+%Para reportar una vulnerabilidad analizamos las salidas que proporciona Splint en busca de palabras clave que identifiquen las vulnerabilidades. Splint como tal no tiene la capacidad para detectar debilidades especificas, en su lugar detecta desbordamientos de búferes, usos de memoria no inicializada, situaciones en las que se producen perdidas de memoria y violaciones de tipos.
+
+En consecuencia, estos indicios no evidencian de manera concluyente la existencia de ciertas vulnerabilidades. Por ejemplo, la vulnerabilidad clasificada como CWE-123, que consiste en la escritura de valores arbitrarios en direcciones de memoria también arbitrarias, no se corresponde directamente con ninguna de las categorías de errores que Splint detecta de forma explícita. Si bien es cierto que algunas de las advertencias generadas por Splint pueden proporcionar indicios de este tipo de vulnerabilidades, dichas evidencias no resultan concluyentes, dado que la herramienta se centra en la detección de errores y fallas en el código, y no en la identificación específica de debilidades según la clasificación CWE.
+
+% Como consecuencia estos indicios no delata con claridad la existencia de ciertas vulnerabilidades. Por ejemplo, la vulnerabilidad CWE-123, la escritura de valores arbitrarios en direcciones de memoria arbitrarias no coincide exactamente con ninguno de estos casos. Si bien es cierto que ciertas evidencias que Splint eleva proporcionan indicios de este tipo de vulnerabilidades, no resulta concluyente, pues como mencionamos, Splint busca errores y fallas en el código, y no \textit{CWE} específicamente.
 
 
 
-ASPECTO MUY IMPORTANTE - EL CODIGO NO CUENTA CON ANOTACIONES O CONTRATOS [POR LO QUE LA EFECTIVIDAD DE SPLINT ES REALMENTE BAJA]
+%Splint fue diseñado para detectar problemas como:
+
+%Desbordamientos de búfer clásicos (CWE-120)
+
+%Uso de memoria no inicializada
+
+%Pérdidas de memoria
+
+%Violaciones de tipos
+
+
+
+%ASPECTO MUY IMPORTANTE - EL CODIGO NO CUENTA CON ANOTACIONES O CONTRATOS [POR LO QUE LA EFECTIVIDAD DE SPLINT ES REALMENTE BAJA]
 
 
 \section{Entrenamiento del gran modelo de lenguaje}
