@@ -331,4 +331,5 @@ TSWLatexianTemp*
 #*Notes.bib
 
 # Specific directories
-/ref-bibliograficas
+document/
+src/
