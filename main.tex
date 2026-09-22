@@ -13,6 +13,10 @@
 \usepackage{dsfont}
 \usepackage[OT1]{fontenc}
 \usepackage{pdfpages}
+\usepackage{longtable}
+\usepackage{booktabs}
+\usepackage{pdflscape}
+\usepackage{csquotes}
 \usepackage[colorlinks=false, pdfborder={0 0 0}]{hyperref}
 % \usepackage{amsmath}
 \usepackage[backend=biber, sorting=none]{biblatex}
@@ -32,7 +36,6 @@ frame=single,
 rulecolor=\color{black},
 autogobble=true
 }
-
 
 
 \begin{document}
@@ -67,6 +70,8 @@ autogobble=true
 
 \listoffigures
 
+\listoftables
+
 \section{Introducción}
 El lenguaje de programación C es uno de los lenguajes más populares en la industria de desarrollo de software. Este lenguaje adquiere una notable presencia en sistemas en los que se necesita acceso a bajo nivel al hardware, la eficiencia temporal y el control explícito de los recursos. Originalmente, C se planteó como un lenguaje de programación de sistemas para la familia de sistemas operativos tipo UNIX,  caracterizado técnicamente como un lenguaje liviano, de propósito general y portable \cite{seacord-2013}. Una gran cantidad de aplicaciones de alto rendimiento y sistemas críticos se implementan en C y continúan en soporte.
 
@@ -81,6 +86,28 @@ Cada una de las vulnerabilidades anteriormente mencionadas se recogen en la Comm
 A la vista de este escenario, la detección de debilidades supone una necesidad con objeto de asegurar la calidad y diseñar software seguro. La literatura sobre el análisis de programas señala una reducción en el coste de corrección de vulnerabilidades si se detectan tempranamente. De hecho, facilita la implementación de prácticas de seguridad <<\textit{shift-left}>> e intervenir antes de que los defectos lleguen a la etapa de despliegue o de explotación \cite{cifuentes-2023}.
 
 Los analizadores de código estático son herramientas que permiten la detección de vulnerabilidades en el código fuente a partir de la detección de patrones. Son herramientas de referencia en la industria de desarrollo software, por ejemplo en las canalizaciones de integración continua, dado que permiten identificar estas vulnerabilidades en las fases tempranas del ciclo de vida del software. Por el contrario, hay estudios empíricos que muestran sus limitaciones en la precisión, cobertura, explicabilidad y unas altas tasas de positivos en sus reportes \cite{aloraini-2019}. Por lo tanto, detectar estas vulnerabilidades asegurando una alta fiabilidad y utilidad sigue siendo un problema abierto.
+
+\subsection{Objetivos conseguidos}
+Hemos seleccionado la suite de pruebas Juliet 1.3 C/C++ como nuestro conjunto de datos el cual analizamos con Splint y entrenamos y validamos los modelos de inteligencia artificial seleccionados.
+
+Los resultados del análisis con Splint recogen las clasificaciones de verdaderos positivos, falsos positivos, verdaderos negativos y falsos negativos. Estos resultados son debidos a que buscamos con Splint si da positivo para la debilidad especifica, si no lo marcamos como negativo. De estos resultados hemos realizado un análisis y proporcionamos las métricas correspondientes.
+
+Los modelos extensos de lenguaje seleccionados son todos modelos livianos, con menos de 4 mil millones de parámetros, y específicamente, los modelos empleados en el ajuste fino de parámetros cuentan con menos de 2 mil millones de parámetros. Esta selección se realizo con el propósito de economizar en tiempo de computo considerando el limitado \textit{hardware} del que disponíamos.
+
+Los resultados con los modelos extensos de lenguaje en cambio recogen la salida del modelo para el \textit{prompt} proporcionado con la instrucción a llevar a cabo y el código. Estos resultados son una salida de texto que en la gran mayoría de los casos sigue un patrón \texttt{\enquote{CWE-XXX}}, en otros casos no lo sigue y por esa razón hay casos que se etiquetan como \textbf{desconocidos}. A partir de los resultados obtenidos hemos elaborado las métricas de cada uno de los modelos en la tarea realizada.
+
+Finalmente, hemos expuesto todos los resultados en gráficas comparativas de las métricas obtenidas en el proceso de análisis, tanto de Splint como de los modelos extensos de lenguaje.
+
+\subsection{Estructura de la memoria}
+En el capitulo \textbf{estado del arte} exponemos todos los contenidos relevantes a las debilidades en el lenguaje C relacionadas con la gestión de memoria y el ajuste fino de modelos extensos de lenguaje. 
+
+En el capitulo \textbf{metodología y herramientas empleadas} exponemos la metodología empleada en la obtención de resultados y análisis y comparación de estos, además del conjunto de datos empleados y las librerías y tecnologías seleccionadas para llevara a cabo todo este proceso.
+
+En el capítulo \textbf{análisis con Splint} exponemos todos los resultados obtenidos en el análisis del conjunto de datos con Splint y los instrumentos estadísticos en los que se sintetiza el rendimiento para la detección de cada una de las debilidades selccionadas.
+
+En el capítulo \textbf{análisis con modelos extensos de lenguaje} exponemos los resultados de clasificación y métricas de rendimiento tanto de los modelos base sobre los que realizamos una validación, como de los modelos sobre los cuales realizamos un ajuste fino de parámetros.
+
+En el capítulo \textbf{resumen de gráficas comparativas} exponemos las figuras en las que comparamos las métricas de rendimiento obtenidas tanto en los modelos extensos de lenguaje como en Splint.
 
 \section{Estado del arte}
 En el contexto de este trabajo profundizaremos en el análisis de vulnerabilidades relacionadas con la pila de llamadas, también llamada pila o \textit{call stack} y el montículo, también llamado \textit{heap}, en el lenguaje C. Ambas son dos regiones de memoria relevantes en la estructura de los programas en tiempo de ejecución.
@@ -333,11 +360,13 @@ Ciertamente, existen diversas estrategias de cuantización con las cuales se pue
 %
 %\subsection{Matriz de inserción ($\textit{Embedding Matrix}$)}
 
+\section{Metodología y herramientas empleadas}
 
-
-\section{Metodología de análisis}
-\subsection{Contextualización}
-La metodología de análisis que empleamos se basa en el análisis comparativo. Su objetivo es detectar debilidades en el código fuente. Con tal fin, recopilamos los resultados del análisis de vulnerabilidades empleando dos tipologías de herramientas: los analizadores de código estático (\textit{SAST}, del inglés \textit{Static Application Security Testing}) y los modelos de lenguaje de gran tamaño (LLM, del inglés \textit{Large Language Model}).
+\subsection{Metodología del trabajo}
+% \section{Metodología de análisis}
+%\subsection{Contextualización}
+\subsubsection{Contextualización de la metodología empleada}
+La metodología de análisis que hemos empleado se basa en el análisis comparativo. Su objetivo es detectar debilidades en el código fuente. Con tal fin, recopilamos los resultados del análisis de vulnerabilidades empleando dos tipologías de herramientas: los analizadores de código estático (\textit{SAST}, del inglés \textit{Static Application Security Testing}) y los modelos de lenguaje de gran tamaño (LLM, del inglés \textit{Large Language Model}).
 
 La detección de estas vulnerabilidades la realizamos sobre código fuente escrito exclusivamente en el lenguaje de programación C. Para tal fin, escogimos \textbf{Splint}, una herramienta estándar para el análisis estático de programas en C. Existen diversos tipos de herramientas de análisis estático, entre las cuales se encuentran los \textit{linter}. Según la definición de Sonar, los \textit{linter} analizan el código estático para identificar y señalar problemas que pueden derivar en errores, vulnerabilidades y \textit{code smells} \cite{sonarsource-2024}. En esencia, estas herramientas buscan patrones en el código que correspondan a errores conocidos, defectos, problemas de estilo o de arquitectura. Splint es una herramienta que pertenece a esta categoría.
 
@@ -347,8 +376,8 @@ En contraste, los \textit{LLM} no presentan esa carencia en contexto, dado que f
 
 Para evaluar el rendimiento de los modelos de lenguaje en detección de vulnerabilidades, seleccionaremos cinco modelos ampliamente utilizados en el dominio de la programación. A continuación, analizaremos los casos de prueba pertenecientes a un conjunto de datos previamente seleccionado, utilizando tanto la herramienta Splint como los modelos mencionados. Finalmente, se comparan los resultados obtenidos con el fin de determinar si, en este contexto, los LLM superan, igualan o presentan un rendimiento inferior al de Splint.
 
-\subsection{Conjunto de datos empleado}
-El conjunto de datos que empleamos es la suite de pruebas Juliet. Es un conjunto, desarrollado por el Centro de Software Confiable (\textit{CAS}, del inglés \textit{Center for Assured Software}) de la NSA (\textit{National Security Agency}), el cual contiene referencias para la evaluación de herramientas de análisis estático de seguridad.
+\subsubsection{Conjunto de datos empleado}
+El conjunto de datos que hemos empleado es la suite de pruebas Juliet. Es un conjunto, desarrollado por el Centro de Software Confiable (\textit{CAS}, del inglés \textit{Center for Assured Software}) de la NSA (\textit{National Security Agency}), el cual contiene referencias para la evaluación de herramientas de análisis estático de seguridad.
 
 En todos los casos de prueba se distinguen tres secciones.
 \begin{enumerate}
@@ -361,24 +390,50 @@ En todos los casos de prueba se distinguen tres secciones.
 
 La ejecución tanto del caso vulnerable como del caso seguro puede controlarse según dos macros \texttt{OMITGOOD} y \texttt{OMITBAD}. Según cuál se defina se omitirá la sección segura o la vulnerable, respectivamente.
 
-Para nuestro análisis seleccionamos la suite Juliet C/C++ en su versión 1.3, la cual recoge más de 64.000 casos de prueba para 118 \textit{CWE} distintos \cite{samate-nist}. Dentro del \textit{corpus} de pruebas escogimos únicamente aquellos casos en C y relativos a las debilidades expuestas desde el apartado \ref{sec:cwe-stack} al apartado \ref{sec:cwe-common} de este trabajo.
+Para nuestro análisis seleccionamos la suite Juliet C/C++ en su versión 1.3, la cual recoge más de 64.000 casos de prueba para 118 \textit{CWE} distintos \cite{samate-nist}. 
+% Dentro del \textit{corpus} de pruebas escogimos únicamente aquellos casos en C y relativos a las debilidades expuestas desde el apartado \ref{sec:cwe-stack} al apartado \ref{sec:cwe-common} de este trabajo.
 
-% IMPORTANTE: MENCIONA TAMBIEN QUE NO COGIMOS LOS CASOS CON CODIGO DE W32
+El conjunto de datos se filtro acorde a los siguientes criterios:
+\begin{itemize}
+	\item Excluimos los casos de prueba específicos a la plataforma Windows. Son aquellos que contienen en el título el termino \enquote{w32}.
+	\item Seleccionamos solo los casos de prueba en el lenguaje de programación C, es decir, aquellos ficheros que tienen una extensión \enquote{.c}.
+	\item Seleccionamos solo los casos de prueba de las debilidades comprendidas en el siguiente listado: CWE-121, CWE-122, CWE-123, CWE-124, CWE-126, CWE-127, CWE-244, CWE-401, CWE-415, CWE-416, CWE-476, CWE-562, CWE-590, CWE-674, CWE-680, CWE-685, CWE-688, CWE-761, CWE-762, CWE-789 y CWE-835.
+\end{itemize}
 
-\section{Herramientas empleadas}
-\subsection{Python}
-Python es un lenguaje de programación que cuenta con una comunidad de gran tamaño en el campo de la ciencia de los datos y la inteligencia artificial. Su sintaxis sencilla, sumada a su enorme ecosistema de desarrollo conformado por múltiples librerías especializadas para labores de inteligencia artificial y análisis de datos, p.ej., PyTorch, Scikit-learn o Pandas; las cuales cuentan con apoyo continuo por parte de la comunidad de desarrolladores, lo hacen una opción relevante en cuanto a la realización de labores de investigación y desarrollo.
+En el análisis con la herramienta Splint no incluimos los resultados para la clasificación de las debilidades CWE-244, CWE-590, CWE-762 y CWE-789 por su nula efectividad en la detección de las vulnerabilidades en estos casos de prueba. De forma que en análisis con la herramienta splint contamos con un total de 18.042 casos de prueba con secciones \textit{good} y \textit{bad}, de forma que realizamos un total de 36.084 pruebas.
+
+Por otro lado, para el análisis con modelos extensos de lenguaje, si que consideramos las vulnerabilidades excluidas en el párrafo anterior. No obstante, ademas de filtrar los casos de prueba, ordenamos por separado las muestras sin vulnerabilidades y las muestras vulnerables según la extensión del código. Posteriormente las intercalamos en un único listado y seleccionamos los 15.000 primeros casos. Esto lo hacemos por las limitaciones técnicas en capacidad de memoria gráfica de la que disponemos, de forma que con un conjunto de datos de este tamaño obtenemos resultados para cada uno de los modelos en un tiempo de computo generalmente inferior a 6 horas.
 
 
-\subsection{Hugging Face y Hugging Face Hub}
-Hugging Face es un proveedor de herramientas de desarrollo de aplicaciones de aprendizaje automático. La empresa ofrece paquetes con herramientas para el diseño y ajuste de modelos de inteligencia artificial. Sus paquetes reciben actualizaciones constantemente y cuentan con todas las herramientas a las que se hizo referencia en la recopilación del estado del arte actual. Por ello, tomamos su tecnología como referencia para nuestros estudios.
+% \section{Herramientas empleadas}
+%\subsection{Python}
+\subsection{Herramientas empleadas}
+\subsubsection{Python}
+Python es un lenguaje de programación que cuenta con una comunidad de gran tamaño en el campo de la ciencia de los datos y la inteligencia artificial. Su sintaxis sencilla, sumada a su enorme ecosistema de desarrollo conformado por múltiples librerías especializadas para labores de inteligencia artificial y análisis de datos, p.ej., PyTorch, Scikit-learn o Pandas; las cuales cuentan con apoyo continuo por parte de la comunidad de desarrolladores, lo hacen una opción relevante en cuanto a la realización de labores de investigación y desarrollo. Por lo tanto, la situación del ecosistema de desarrollo, lo cual permite alcanzar un modelo de inteligencia artificial funcional en la menor cantidad de tiempo posible, junto a la presencia de una gran cantidad de documentación, discusiones en foros y proyectos de código abierto en internet hacen de Python una opción adecuada para el desarrollo de proyectos de inteligencia artificial.
+
+\subsubsection{Jupyter Notebook}
+Jupyter Notebook basa el desarrollo en un entorno informático interactivo agnóstico respecto al lenguaje. Su interfaz basada en ejecuciones de celdas de código con salidas asociada a cada una de estas lo hace una opción muy adecuada para poder proporcionar resultados de ejecución sin necesidad de volver a ejecutar de nuevo el código en proyectos de computación científica o inteligencia artificial. Provee además de conversiones a múltiples tipos de estándares, como HTML, LaTeX, PDF o Python. Jupyter Notebook en esencia permite programar en Python y ejecutar celdas especificas del código sin necesidad de ejecutar el código entero, lo que facilita la revisión y validación del código, además hace más sencillo el proceso de depuración gracias a esta característica.
+
+\subsubsection{Matplotlib}
+La biblioteca de código Matplotlib facilita la tarea de representar datos recopilados en gráficos. Ello sumado a su gran adopción en la comunidad científica y su gran cantidad de discusiones en foros la hace una herramienta útil y fácil de usar.
+
+\subsubsection{NumPy}
+NumPy es una biblioteca de código útil para el manejo eficiente de datos numéricos. Esto es relevante en nuestro trabajo dado que manejamos una gran cantidad de datos numéricos en colecciones y lista, lo cual de forma nativa en Python consumiría una gran cantidad de recursos.
+
+\subsubsection{Scikit-learn}
+Scikit-learn es una biblioteca de código destinada al aprendizaje automático. En nuestro trabajo nos es fundamental para el tratamiento de los datos de evaluación de los modelos de artificial, pues la empleamos para generar las matrices de confusión y los informes de clasificación a partir de los cuales obtenemos las métricas de cada modelos en la tarea a la que los sometemos.
+
+
+%\subsection{Hugging Face y Hugging Face Hub}
+\subsubsection{Hugging Face y Hugging Face Hub}
+Hugging Face es un proveedor de herramientas de desarrollo de aplicaciones de aprendizaje automático. La empresa ofrece paquetes con herramientas para el diseño y ajuste de modelos de inteligencia artificial. Sus paquetes reciben actualizaciones constantemente y cuentan con todas las herramientas a las que se hizo referencia en la recopilación del estado del arte actual. Por ello, tomamos su tecnología como referencia para nuestros estudios, específicamente las librerías \textbf{transformers} y \textbf{datasets}, las cuales nos permiten acceder con gran facilidad a los modelos de inteligencia artificial y conjuntos de datos alojados en los servidores de HuggingFace. 
 
 Por otro lado, la organización Hugging Face también administra la plataforma online Hugging Face Hub, la cual recoge publicaciones, tanto de particulares como de organizaciones, de modelos de inteligencia artificial y conjuntos de datos de entrenamiento. Escogimos esta plataforma porque es la que contiene la colección de modelos de inteligencia artificial de acceso abierto (\textit{open source}) más actualizada de Internet. Esto es especialmente relevante dado que permite el acceso a los modelos de inteligencia artificial más avanzados desarrollados por las principales organizaciones dedicadas a la investigación y desarrollo en esta materia \cite{hugging-face}.
 
 Adicionalmente, la plataforma cuenta con un sistema de reputación de los artefactos publicados basado en mecanismos de retroalimentación cuantificables:  \textit{likes} y número de descargas realizadas en el último mes.
 
 
-\section{Resultados de análisis con Splint}
+\section{Análisis con Splint}
 \subsection{Exposición de la tabla-matriz de confusión}
 En la figura \ref{fig:resultados-cwe-splint} exponemos los resultados obtenidos. Se expone en una tabla en la cual se presenta la matriz de confusión de cada uno de los tipos de vulnerabilidades en formato fila. A continuación se expone una leyenda del significado de cada una de las columnas de la matriz de confusión.
 \begin{itemize}
@@ -393,90 +448,87 @@ En la figura \ref{fig:resultados-cwe-splint} exponemos los resultados obtenidos.
 
 \raggedbottom
 
-\vspace*{\fill}
+\begin{longtable}{lrrrrrrrrr}
+	\caption{Análisis con Splint: tabla con la matriz de confusión y métricas de clasificación por clases \textit{CWE}}
+	\label{fig:resultados-cwe-splint} \\
+	\toprule
+	\textbf{CWE} & \textbf{TP} & \textbf{TN} & \textbf{FP} & \textbf{FN} & \textbf{Nº pruebas} & \textbf{\textit{Accuracy}} & \textbf{\textit{Precisión}} & \textbf{\textit{Recall}} & \textbf{\textit{F1 score}} \\
+	\midrule
+	\endfirsthead
+	\multicolumn{10}{c}{{\bfseries \tablename\ \thetable{} -- Continuación de la página anterior}} \\
+	\toprule
+	\textbf{CWE} & \textbf{TP} & \textbf{TN} & \textbf{FP} & \textbf{FN} & \textbf{Nº pruebas} & \textbf{\textit{Accuracy}} & \textbf{\textit{Precisión}} & \textbf{\textit{Recall}} & \textbf{\textit{F1 score}} \\
+	\midrule
+	\endhead
+	\midrule
+	\multicolumn{10}{r}{Continúa en la siguiente página} \\
+	\endfoot
+	\midrule
+	\multicolumn{10}{l}{\textbf{\textit{Global Accuracy}:} 0.50 (50\%) -- Total de pruebas: 36.084} \\
+	\bottomrule
+	\endlastfoot
+	CWE-121 & 4183 & 1723 & 4183 & 1723 & 11812 & 0.5000 & 0.5000 & 0.7083 & 0.5862 \\
+	CWE-122 & 2158 & 1498 & 2158 & 1498 & 7312  & 0.5000 & 0.5000 & 0.5903 & 0.5414 \\
+	CWE-123 & 150  & 18   & 150  & 18   & 336   & 0.5000 & 0.5000 & 0.8929 & 0.6410 \\
+	CWE-124 & 1347 & 549  & 1347 & 549  & 3792  & 0.5000 & 0.5000 & 0.7104 & 0.5869 \\
+	CWE-126 & 945  & 435  & 945  & 435  & 2760  & 0.5000 & 0.5000 & 0.6848 & 0.5780 \\
+	CWE-127 & 1222 & 674  & 1222 & 674  & 3792  & 0.5000 & 0.5000 & 0.6445 & 0.5631 \\
+	CWE-401 & 600  & 628  & 600  & 628  & 2456  & 0.5000 & 0.5000 & 0.4886 & 0.4942 \\
+	CWE-415 & 246  & 90   & 246  & 90   & 672   & 0.5000 & 0.5000 & 0.7321 & 0.5942 \\
+	CWE-416 & 132  & 18   & 132  & 18   & 300   & 0.5000 & 0.5000 & 0.8800 & 0.6377 \\
+	CWE-476 & 238  & 134  & 238  & 134  & 744   & 0.5000 & 0.5000 & 0.6398 & 0.5613 \\
+	CWE-562 & 0    & 2    & 0    & 2    & 4     & 0.5000 & 0.0000 & 0.0000 & 0.0000 \\
+	CWE-674 & 0    & 2    & 0    & 2    & 4     & 0.5000 & 0.0000 & 0.0000 & 0.0000 \\
+	CWE-680 & 117  & 219  & 117  & 219  & 672   & 0.5000 & 0.5000 & 0.3482 & 0.4105 \\
+	CWE-685 & 18   & 0    & 18   & 0    & 36    & 0.5000 & 0.5000 & 1.0000 & 0.6667 \\
+	CWE-688 & 18   & 0    & 18   & 0    & 36    & 0.5000 & 0.5000 & 1.0000 & 0.6667 \\
+	CWE-761 & 536  & 136  & 536  & 136  & 1344  & 0.5000 & 0.5000 & 0.7976 & 0.6147 \\
+	CWE-835 & 0    & 6    & 0    & 6    & 12    & 0.5000 & 0.0000 & 0.0000 & 0.0000 \\
+\end{longtable}
+
+\begin{longtable}{llr}
+	\caption{Análisis con Splint: métricas globales macro y ponderadas por el número de pruebas}
+	\label{fig:global-metrics-splint} \\
+	\toprule
+	\textbf{Métrica} & \textbf{Valor macro} & \textbf{Valor ponderado} \\
+	\midrule
+	\endfirsthead
+	\toprule
+	\textbf{Métrica} & \textbf{Valor macro} & \textbf{Valor ponderado} \\
+	\midrule
+	\endhead
+	\bottomrule
+	\endfoot
+	\bottomrule
+	\endlastfoot
+	\textit{Precision} & 0.4118 (41,18\%) & 0.4997 (49,97\%) \\
+	\textit{Recall}   & 0.5951 (59,51\%) & 0.6601 (66,01\%) \\
+	\textit{F1 score} & 0.4790 (47,90\%) & 0.5661 (56,61\%) \\
+\end{longtable}
+
+\subsection{Análisis de las métricas de rendimiento}
 \begin{figure}[H]
 	\centering
-	\begin{tabular}{|l|l|l|l|l|l|l|}
-		\hline
-		Debilidad & Nº casos de prueba & \multicolumn{1}{l|}{Nº de pruebas realizadas} & \multicolumn{1}{l|}{VP} & \multicolumn{1}{l|}{VN} & \multicolumn{1}{l|}{FP} & \multicolumn{1}{l|}{FN} \\ \hline
-		CWE-121 & 5906 & 11812 & 4183 & 1723 & 4183 & 1723 \\
-		\hline
-		CWE-122 & 3656 & 7312 & 2158 & 1498 & 2158 & 1498 \\
-		\hline
-		CWE-123 & 168 & 336 & 150 & 18 & 150 & 18 \\
-		\hline
-		CWE-124 & 1896 & 3792 & 1347 & 549 & 1347 & 549 \\
-		\hline
-		CWE-126 & 1380 & 2760 & 945 & 435 & 945 & 435 \\
-		\hline
-		CWE-127 & 1896 & 3792 & 1222 & 674 & 1222 & 674 \\
-		\hline
-		CWE-401 & 1228 & 2456 & 600 & 628 & 600 & 628 \\
-		\hline
-		CWE-415 & 336 & 672 & 246 & 90 & 246 & 90 \\
-		\hline
-		CWE-416 & 150 & 300 & 132 & 18 & 132 & 18 \\
-		\hline
-		CWE-476 & 372 & 744 & 238 & 134 & 238 & 134 \\
-		\hline
-		CWE-562 &  2  &  4  &  0  &  2  &  0  &  2 \\
-		\hline
-		CWE-674 &  2  &  4  &  0  &  2  &  0  &  2 \\
-		\hline
-		CWE-680 & 336 & 672 & 117 & 219 & 117 & 219 \\
-		\hline
-		CWE-685 &  18  &  36  &  18  &  0  &  18  &  0 \\
-		\hline
-		CWE-688 &  18  &  36  &  18  &  0  &  18  &  0 \\
-		\hline
-		CWE-761 & 672 & 1344 & 536 & 136 & 536 & 136 \\
-		\hline
-		CWE-835 & 6 & 12 & 0 & 6 & 0 & 6 \\
-		\hline
-		\hline
-		\multicolumn{7}{|c|}{\textbf{Total de casos de prueba: 18.192 (pruebas realizadas: 36.384)}} \\
-		\hline
-	\end{tabular}
-	\caption{Resultados obtenidos de análisis de \textit{CWE} con la herramienta Splint}
-	\label{fig:resultados-cwe-splint}
+	\includegraphics[width=1\textwidth]{images/splint-performance-graph.png}
+	\caption{Gráfico de barras con las métricas de rendimiento de Splint}
+	\label{fig:splint-metrics-performance-graph}
 \end{figure}
-\vspace*{\fill}
 
-\newpage
+Las métricas de rendimiento de rendimiento de Splint nos indican que el funcionamiento de Splint es tan efectivo como el azar, obteniendo en total un \textbf{50\% de exactitud global} (\textit{accuracy}). Observamos claramente que Splint comete una gran cantidad de falsos positivos, pues esto se refleja claramente en los valores de precisión \textit{precision}, siendo este del 41\% en el valor macro y de un 50 \% en el ponderado. 
+
+Por otro lado, se observa que el valor de exhaustividad es moderado, lo que significa que el modelo no emite tantos falsos negativos. Esto lo evidencia la facilidad que tiene Splint de informar acerca de una falla, siendo en ese aspecto una herramienta bastante conservadora respecto al análisis de fallas de código y vulnerabilidades.
+
+Por último, podemos recalcar que los valores ponderados son más elevados que los valores macro, esto ocurre evidencia que el comportamiento de Splint no varía según la vulnerabilidad, no ocurre que para debilidades especificas tiene un mejor rendimiento que para otras, sino que su comportamiento es estadísticamente similar, sin importar la clase de la debilidad.
+
 
 \subsection{Análisis de los resultados}
-Se observa un patrón recurrente en todos los casos: los falsos positivos coinciden con los verdaderos positivos, mientras que los falsos negativos coinciden con los verdaderos negativos.
+Observamos un patrón recurrente en todos los casos: los falsos positivos coinciden con los verdaderos positivos, mientras que los falsos negativos coinciden con los verdaderos negativos.
 Ello se debe a que, cuando la herramienta detecta una vulnerabilidad en el código, la identifica tanto en la prueba que contiene únicamente código vulnerable como en aquella que presenta código seguro. Esta situación es consecuencia de que las modificaciones introducidas en los casos de prueba para tornar el código seguro consisten en cambios de una sola línea o en la modificación de una asignación de variable. Por consiguiente, Splint genera una cantidad considerable de falsos positivos en contextos en los que, propiamente, no existen vulnerabilidades.
-
-% Es posible observar que en todos los casos se repite un patrón: los falsos positivos coinciden con los verdaderos positivos, y los falsos negativos coinciden con los verdaderos negativos. Esto se debe a que cuando encuentra una vulnerabilidad en el código, la detecta tanto en la prueba que solo se encuentra el código vulnerable como la prueba en la que se encuentra el código seguro. Esto se debe a que las modificaciones que se realiza en los casos de prueba para hacer el código seguro consiste en modificaciones de una sola linea o un cambio de asignación de variable, por lo que Splint acaba marcando una gran cantidad de falsos positivos dónde debidamente no existen.
 
 \subsubsection{Proceso de reporte de vulnerabilidades con Splint}
 En el proceso de reporte de vulnerabilidades mediante la herramienta Splint, analizamos las salidas en busca de palabras clave (\textit{keywords}) que permitieran identificar fallos de seguridad. Cabe resaltar que Splint no posee la capacidad de detectar debilidades específicas, sino que es una herramienta especializada en la identificación de problemas como desbordamientos de búfer, usos de memoria no inicializada, pérdidas de memoria y violaciones de tipos.
 
-%Para reportar una vulnerabilidad analizamos las salidas que proporciona Splint en busca de palabras clave que identifiquen las vulnerabilidades. Splint como tal no tiene la capacidad para detectar debilidades especificas, en su lugar detecta desbordamientos de búferes, usos de memoria no inicializada, situaciones en las que se producen perdidas de memoria y violaciones de tipos.
-
 En consecuencia, estos indicios no evidencian de manera concluyente la existencia de ciertas vulnerabilidades. Por ejemplo, la vulnerabilidad clasificada como CWE-123, que consiste en la escritura de valores arbitrarios en direcciones de memoria también arbitrarias, no se corresponde directamente con ninguna de las categorías de errores que Splint detecta de forma explícita. Si bien es cierto que algunas de las advertencias generadas por Splint pueden proporcionar indicios de este tipo de vulnerabilidades, dichas evidencias no resultan concluyentes, dado que la herramienta se centra en la detección de errores y fallas en el código, y no en la identificación específica de debilidades según la clasificación CWE.
-
-% Como consecuencia estos indicios no delata con claridad la existencia de ciertas vulnerabilidades. Por ejemplo, la vulnerabilidad CWE-123, la escritura de valores arbitrarios en direcciones de memoria arbitrarias no coincide exactamente con ninguno de estos casos. Si bien es cierto que ciertas evidencias que Splint eleva proporcionan indicios de este tipo de vulnerabilidades, no resulta concluyente, pues como mencionamos, Splint busca errores y fallas en el código, y no \textit{CWE} específicamente.
-
-
-
-%Splint fue diseñado para detectar problemas como:
-
-%Desbordamientos de búfer clásicos (CWE-120)
-
-%Uso de memoria no inicializada
-
-%Pérdidas de memoria
-
-%Violaciones de tipos
-
-
-
-%ASPECTO MUY IMPORTANTE - EL CODIGO NO CUENTA CON ANOTACIONES O CONTRATOS [POR LO QUE LA EFECTIVIDAD DE SPLINT ES REALMENTE BAJA]
-
-
-
 
 \section{Análisis con modelos extensos de lenguaje}
 Inicialmente realizamos una búsqueda de modelos extensos de lenguaje publicados que previamente contasen con un ajuste fino de parámetros para la tarea de clasificar la vulnerabilidad encontrada en código fuente en el lenguaje C.
@@ -493,7 +545,7 @@ Para comparar el rendimiento de los modelos extensos de lenguaje con Splint, ele
 	\item \texttt{HuggingFaceTB/SmolLM2-1.7B-Instruct}. Se realizó un ajuste fino de parámetros y una posterior validación del modelo ajustado.
 \end{itemize}
 
-Para validar tanto el modelo \texttt{google/gemma-2-2b-it} como el modelo \texttt{microsoft/Phi-3.5-mini-instruct} utilizamos un conjunto de datos conformado por un total de 15.000 casos.
+Para validar tanto el modelo \texttt{google/gemma-2-2b-it} como el modelo \texttt{microsoft/Phi\-3.5-mini-instruct} utilizamos un conjunto de datos conformado por un total de 15.000 casos.
 
 El resto de modelos se entrenaron con un conjunto de datos de entrenamiento de 15.000 casos, y para la validación empleamos un conjunto de datos de validación de 5.000 casos. De forma que la proporción de casos de prueba respecto a casos de validación de 75/25.
 
@@ -509,49 +561,89 @@ El ejemplo más claro de falso positivo, del cual además no se contaba con ning
 
 Resumidamente, afirmamos que el rendimiento del modelo es pésimo para la tarea encomendada, teniendo un rendimiento significativamente peor que Splint.
 
+\begin{longtable}{lrrrr}
+	\caption{Métricas de clasificación \texttt{google/gemma-2-2b-it}}
+	\label{fig:validation-google-gemma-2-2b-it} \\
+	\toprule
+	\textbf{CWE} & \textbf{\textit{Precision}} & \textbf{\textit{Recall}} & \textbf{\textit{F1 score}} & \textbf{\textit{Support}} \\
+	\midrule
+	\endfirsthead
+	\multicolumn{5}{c}{{\bfseries \tablename\ \thetable{} -- Continuación de la página anterior}} \\
+	\toprule
+	\textbf{CWE} & \textbf{\textit{Precision}} & \textbf{\textit{Recall}} & \textbf{\textit{F1 score}} & \textbf{\textit{Support}} \\
+	\midrule
+	\endhead
+	\midrule
+	\multicolumn{5}{r}{Continúa en la siguiente página} \\
+	\endfoot
+	\midrule
+	\multicolumn{5}{l}{\textbf{\textit{Global Accuracy}:} 0.24 (24\%) -- Total de pruebas: 15.000} \\
+	\bottomrule
+	\endlastfoot
+	CWE-121 & 0.42 & 0.55 & 0.48 & 1956 \\
+	CWE-122 & 0.81 & 0.27 & 0.41 & 1286 \\
+	CWE-123 & 1.00 & 0.12 & 0.22 &    8 \\
+	CWE-124 & 0.58 & 0.69 & 0.63 &  729 \\
+	CWE-127 & 0.70 & 0.70 & 0.70 &  777 \\
+	CWE-126 & 0.51 & 0.69 & 0.59 &  543 \\
+	CWE-129 & 0.00 & 0.00 & 0.00 &    0 \\
+	CWE-131 & 0.00 & 0.00 & 0.00 &    0 \\
+	CWE-135 & 0.00 & 0.00 & 0.00 &    0 \\
+	CWE-193 & 0.00 & 0.00 & 0.00 &    0 \\
+	CWE-244 & 0.00 & 0.00 & 0.00 &    0 \\
+	CWE-401 & 1.00 & 0.06 & 0.11 &  837 \\
+	CWE-415 & 0.54 & 0.35 & 0.42 &  254 \\
+	CWE-416 & 0.14 & 0.38 & 0.20 &   29 \\
+	CWE-476 & 0.00 & 0.00 & 0.00 &  347 \\
+	CWE-562 & 0.00 & 0.00 & 0.00 &    2 \\
+	CWE-590 & 0.74 & 0.71 & 0.72 &  486 \\
+	CWE-674 & 0.00 & 0.00 & 0.00 &    2 \\
+	CWE-680 & 1.00 & 0.19 & 0.32 &   52 \\
+	CWE-685 & 0.60 & 1.00 & 0.75 &   12 \\
+	CWE-688 & 0.57 & 1.00 & 0.73 &   12 \\
+	CWE-761 & 0.60 & 0.56 & 0.58 &  117 \\
+	CWE-789 & 1.00 & 0.80 & 0.89 &   45 \\
+	CWE-79  & 0.00 & 0.00 & 0.00 &    0 \\
+	CWE-835 & 1.00 & 1.00 & 1.00 &    6 \\
+	CWE-89  & 0.00 & 0.00 & 0.00 &    0 \\
+	SAFE    & 0.04 & 0.01 & 0.02 & 7500 \\
+\end{longtable}
+
+\begin{longtable}{llr}
+	\caption[Métricas globales \texttt{google/gemma-2-2b-it}]{Métricas globales macro y ponderadas por el número de pruebas \texttt{google/gemma-2-2b-it}}
+	\label{fig:global-metrics-google-gemma-2-2b-it} \\
+	\toprule
+	\textbf{Métrica} & \textbf{Valor macro} & \textbf{Valor ponderado} \\
+	\midrule
+	\endfirsthead
+	\toprule
+	\textbf{Métrica} & \textbf{Valor macro} & \textbf{Valor ponderado} \\
+	\midrule
+	\endhead
+	\bottomrule
+	\endfoot
+	\bottomrule
+	\endlastfoot
+	\textit{Precision} & 0.42 (42\%) & 0.33 (33\%) \\
+	\textit{Recall}   & 0.34 (34\%) & 0.24 (24\%) \\
+	\textit{F1 score} & 0.32 (32\%) & 0.24 (24\%) \\
+\end{longtable}
+
+\subsubsection{Análisis comparativo de las métricas de rendimiento con Splint}
 \begin{figure}[H]
 	\centering
-	\begin{tabular}{|l|l|l|l|l|}
-		\hline
-		\textbf{Debilidad} & \textbf{Precisión} & \textbf{Exhaustividad} & \textbf{Puntuación F1} & \textbf{Soporte} \\
-		\hline
-		\hline
-		CWE-121 & 0.42 & 0.55 & 0.48 & 1956 \\
-		CWE-122 & 0.81 & 0.27 & 0.41 & 1286 \\
-		CWE-123 & 1.00 & 0.12 & 0.22 &    8 \\
-		CWE-124 & 0.58 & 0.69 & 0.63 &  729 \\
-		CWE-126 & 0.51 & 0.69 & 0.59 &  543 \\
-		CWE-127 & 0.70 & 0.70 & 0.70 &  777 \\
-		CWE-129 & 0.00 & 0.00 & 0.00 &    0 \\
-		CWE-131 & 0.00 & 0.00 & 0.00 &    0 \\
-		CWE-135 & 0.00 & 0.00 & 0.00 &    0 \\
-		CWE-193 & 0.00 & 0.00 & 0.00 &    0 \\
-		CWE-244 & 0.00 & 0.00 & 0.00 &    0 \\
-		CWE-401 & 1.00 & 0.06 & 0.11 &  837 \\
-		CWE-415 & 0.54 & 0.35 & 0.42 &  254 \\
-		CWE-416 & 0.14 & 0.38 & 0.20 &   29 \\
-		CWE-476 & 0.00 & 0.00 & 0.00 &  347 \\
-		CWE-562 & 0.00 & 0.00 & 0.00 &    2 \\
-		CWE-590 & 0.74 & 0.71 & 0.72 &  486 \\
-		CWE-674 & 0.00 & 0.00 & 0.00 &    2 \\
-		CWE-680 & 1.00 & 0.19 & 0.32 &   52 \\
-		CWE-685 & 0.60 & 1.00 & 0.75 &   12 \\
-		CWE-688 & 0.57 & 1.00 & 0.73 &   12 \\
-		CWE-761 & 0.60 & 0.56 & 0.58 &  117 \\
-		CWE-789 & 1.00 & 0.80 & 0.89 &   45 \\
-		CWE-79  & 0.00 & 0.00 & 0.00 &    0 \\
-		CWE-835 & 1.00 & 1.00 & 1.00 &    6 \\
-		CWE-89  & 0.00 & 0.00 & 0.00 &    0 \\
-		SAFE    & 0.04 & 0.01 & 0.02 & 7500 \\
-		\hline
-		\hline
-		EXACTITUD & & &  0.24 (24\%) & 15000\\
-		\hline
-	\end{tabular}
-	\caption[Resultados análisis del modelo \texttt{google/gemma-2-2b-it}]{Resultados obtenidos en la validación del modelo \texttt{google/gemma-2-2b-it}}
-	\label{fig:validation-google-gemma-2-2b-it}
+	\includegraphics[width=1\textwidth]{images/gemma-2b-compared-to-splint.png}
+	\caption{Gráfico de barras con las métricas de rendimiento de Google Gemma 2B en comparación a Splint}
+	\label{fig:google-gemma-2B-metrics-performance-comparison-graph}
 \end{figure}
 
+Las métricas de rendimiento del modelo Google Gemma 2B evidencian lo que esperábamos: el modelo no fue entrenado para la tarea a la que lo enfrentamos.
+
+Su valor de exactitud global es muy bajo, de un \textbf{24\%}, y además, su valor de precisión es muy pobre, siendo el macro de un \textbf{42\%} y ponderado de un \textbf{33\%}. Estos resultados se explican especialmente por su elevada tasa de falsos positivos, dado que el modelo base es prácticamente incapaz de identificar casos marcados como seguros, siendo extremadamente conservador en este ámbito.
+
+Por otro lado, es bastante escaso lo que identifica correctamente, teniendo un valor de sensibilidad en macro del \textbf{34\%} y ponderado del \textbf{24\%}. Adicionalmente, observamos que sus valores ponderados son significativamente peores que sus valores macros.
+
+Las dos observaciones anteriores se explican por la elevada tasa de casos que etiqueta incorrectamente, como es el caso de la debilidad \texttt{CWE-79}, la cual etiqueta indiscriminadamente a casos que son completamente independientes entre sí.
 
 \subsection{Resultados de la validación de $\texttt{microsoft/Phi-3.5-mini-instruct}$}
 En la figura \ref{fig:validation-microsoft-phi-3-5-mini-instruct} se encuentran los resultados de la validación del modelo.
@@ -560,55 +652,95 @@ Los resultados evidencian una alta tasa de falsos positivos, en este caso con la
 
 Respecto a estos falsos positivos resulta reseñable la clasificación de vulnerabilidades en \texttt{CWE-79}, que es la debilidad de \textit{Cross-Site Scripting} (XSS) y, \texttt{CWE-801}, que no es una vulnerabilidad sino una categoría de vulnerabilidades.
 
-Adicionalmente, ningún caso etiquetado como \texttt{"SAFE"} fue clasificado debidamente, de forma que el modelo clasificó todos los casos recibidos como vulnerables.
+Adicionalmente, ningún caso etiquetado como \texttt{\enquote{SAFE}} fue clasificado debidamente, de forma que el modelo clasificó todos los casos recibidos como vulnerables.
 
-A pesar de estos resultados, el modelo \texttt{microsoft/Phi-3.5-mini-instruct} hizo un trabajo mucho mejor que el anterior, puntuando con un 50\% de aciertos. Aunque con un 50\% de aciertos no supera los resultados de Splint, por lo que es peor para la tarea de análisis de vulnerabilidades en código en comparación con el analizador de código estático.
+El modelo Microsoft Phi 3.5 Mini Instruct es un modelo multilenguaje entrenado para las tareas de razonamiento lógico y matemático, y de escritura de código. A este modelo se le aplica un ajuste fino de parámetros supervisado para poder llevar a cabo tareas de razonamiento. Cuenta con una ventana de contexto de hasta 128.000 tókenes, por lo que cuenta con capacidad para analizar textos y documentos de longitudes extensas. \cite{abdin-2024}
 
+Estas características explican que este modelo rinda significativamente mejor que el modelo \texttt{google/gemma-2-2b-it}, contando el modelo de Microsoft con un 50\% en la puntuación global de aciertos. Aun así el modelo no supera los resultados globales de Splint, por lo que es peor para la tarea de análisis de vulnerabilidades en código al compararlo con el analizador de código estático.
 
+\begin{longtable}{lrrrr}
+	\caption{Métricas de clasificación \texttt{microsoft/Phi-3.5-mini-instruct}}
+	\label{fig:validation-microsoft-phi-3-5-mini-instruct} \\
+	\toprule
+	\textbf{CWE} & \textbf{\textit{Precision}} & \textbf{\textit{Recall}} & \textbf{\textit{F1 score}} & \textbf{\textit{Support}} \\
+	\midrule
+	\endfirsthead
+	\multicolumn{5}{c}{{\bfseries \tablename\ \thetable{} -- Continuación de la página anterior}} \\
+	\toprule
+	\textbf{CWE} & \textbf{\textit{Precision}} & \textbf{\textit{Recall}} & \textbf{\textit{F1 score}} & \textbf{\textit{Support}} \\
+	\midrule
+	\endhead
+	\midrule
+	\multicolumn{5}{r}{Continúa en la siguiente página} \\
+	\endfoot
+	\midrule
+	\multicolumn{5}{l}{\textbf{\textit{Global Accuracy}:} 0.50 (50\%) -- Total de pruebas: 15.000} \\
+	\bottomrule
+	\endlastfoot
+	CWE-121 & 0.47 & 1.00 & 0.64 & 1956 \\
+	CWE-122 & 0.52 & 1.00 & 0.68 & 1286 \\
+	CWE-123 & 1.00 & 1.00 & 1.00 &   8 \\
+	CWE-124 & 0.45 & 1.00 & 0.62 & 729 \\
+	CWE-126 & 0.46 & 1.00 & 0.63 & 543 \\
+	CWE-127 & 0.47 & 1.00 & 0.64 & 777 \\
+	CWE-151 & 0.00 & 0.00 & 0.00 &   0 \\
+	CWE-180 & 0.00 & 0.00 & 0.00 &   0 \\
+	CWE-184 & 0.00 & 0.00 & 0.00 &   0 \\
+	CWE-190 & 0.00 & 0.00 & 0.00 &   0 \\
+	CWE-20  & 0.00 & 0.00 & 0.00 &   0 \\
+	CWE-244 & 0.00 & 0.00 & 0.00 &   0 \\
+	CWE-401 & 0.56 & 1.00 & 0.72 & 837 \\
+	CWE-415 & 0.59 & 0.99 & 0.74 & 254 \\
+	CWE-416 & 0.24 & 1.00 & 0.39 &  29 \\
+	CWE-467 & 0.00 & 0.00 & 0.00 &   0 \\
+	CWE-476 & 0.63 & 1.00 & 0.78 & 347 \\
+	CWE-562 & 0.00 & 0.00 & 0.00 &   2 \\
+	CWE-590 & 0.52 & 1.00 & 0.68 & 486 \\
+	CWE-674 & 0.00 & 0.00 & 0.00 &   2 \\
+	CWE-680 & 0.52 & 1.00 & 0.68 &  52 \\
+	CWE-685 & 0.60 & 1.00 & 0.75 &  12 \\
+	CWE-688 & 0.48 & 1.00 & 0.65 &  12 \\
+	CWE-761 & 0.72 & 1.00 & 0.84 & 117 \\
+	CWE-789 & 1.00 & 1.00 & 1.00 &  45 \\
+	CWE-79  & 0.00 & 0.00 & 0.00 &   0 \\
+	CWE-801 & 0.00 & 0.00 & 0.00 &   0 \\
+	CWE-835 & 1.00 & 1.00 & 1.00 &   6 \\
+	SAFE    & 0.00 & 0.00 & 0.00 & 7500 \\
+\end{longtable}
+
+\begin{longtable}{llr}
+	\caption[Métricas globales \texttt{microsoft/Phi-3.5-mini-instruct}]{Métricas globales macro y ponderadas por el número de pruebas (\texttt{microsoft/Phi-3.5-mini-instruct})}
+	\label{fig:global-metrics-phi-3.5-mini} \\
+	\toprule
+	\textbf{Métrica} & \textbf{Valor macro} & \textbf{Valor ponderado} \\
+	\midrule
+	\endfirsthead
+	\toprule
+	\textbf{Métrica} & \textbf{Valor macro} & \textbf{Valor ponderado} \\
+	\midrule
+	\endhead
+	\bottomrule
+	\endfoot
+	\bottomrule
+	\endlastfoot
+	\textit{Precision} & 0.35 (35\%) & 0.25 (25\%) \\
+	\textit{Recall}   & 0.59 (59\%) & 0.50 (50\%) \\
+	\textit{F1 score} & 0.43 (43\%) & 0.34 (34\%) \\
+\end{longtable}
+
+\subsubsection{Análisis comparativo de las métricas de rendimiento con Splint}
 \begin{figure}[H]
 	\centering
-	\begin{tabular}{|l|l|l|l|l|}
-		\hline
-		\textbf{Debilidad} & \textbf{Precisión} & \textbf{Exhaustividad} & \textbf{Puntuación F1} & \textbf{Soporte} \\
-		\hline
-		\hline
-     	CWE-121 & 0.47 & 1.00 & 0.64 & 1956 \\
-		CWE-122 & 0.52 & 1.00 & 0.68 & 1286 \\
-		CWE-123 & 1.00 & 1.00 & 1.00 &   8 \\
-		CWE-124 & 0.45 & 1.00 & 0.62 & 729 \\
-		CWE-126 & 0.46 & 1.00 & 0.63 & 543 \\
-		CWE-127 & 0.47 & 1.00 & 0.64 & 777 \\
-		CWE-151 & 0.00 & 0.00 & 0.00 &   0 \\
-		CWE-180 & 0.00 & 0.00 & 0.00 &   0 \\
-		CWE-184 & 0.00 & 0.00 & 0.00 &   0 \\
-		CWE-190 & 0.00 & 0.00 & 0.00 &   0 \\
-		CWE-20  & 0.00 & 0.00 & 0.00 &   0 \\
-		CWE-244 & 0.00 & 0.00 & 0.00 &   0 \\
-		CWE-401 & 0.56 & 1.00 & 0.72 & 837 \\
-		CWE-415 & 0.59 & 0.99 & 0.74 & 254 \\
-		CWE-416 & 0.24 & 1.00 & 0.39 &  29 \\
-		CWE-467 & 0.00 & 0.00 & 0.00 &   0 \\
-		CWE-476 & 0.63 & 1.00 & 0.78 & 347 \\
-		CWE-562 & 0.00 & 0.00 & 0.00 &   2 \\
-		CWE-590 & 0.52 & 1.00 & 0.68 & 486 \\
-		CWE-674 & 0.00 & 0.00 & 0.00 &   2 \\
-		CWE-680 & 0.52 & 1.00 & 0.68 &  52 \\
-		CWE-685 & 0.60 & 1.00 & 0.75 &  12 \\
-		CWE-688 & 0.48 & 1.00 & 0.65 &  12 \\
-		CWE-761 & 0.72 & 1.00 & 0.84 & 117 \\
-		CWE-789 & 1.00 & 1.00 & 1.00 &  45 \\
-		CWE-79  & 0.00 & 0.00 & 0.00 &   0 \\
-		CWE-801 & 0.00 & 0.00 & 0.00 &   0 \\
-		CWE-835 & 1.00 & 1.00 & 1.00 &   6 \\
-		SAFE    & 0.00 & 0.00 & 0.00 & 7500 \\
-		\hline
-		\hline
-		EXACTITUD & & &  0.50 (50\%) & 15000\\
-		\hline
-	\end{tabular}
-	\caption[Resultados análisis del modelo \texttt{microsoft/Phi-3.5-mini-instruct}]{Resultados obtenidos en la validación del modelo \texttt{microsoft/Phi-3.5-mini-instruct}}
-	\label{fig:validation-microsoft-phi-3-5-mini-instruct}
+	\includegraphics[width=1\textwidth]{images/phi-3_5-compared-to-splint.png}
+	\caption{Gráfico de barras con las métricas de rendimiento de Microsoft Phi 3.5 en comparación a Splint}
+	\label{fig:microsoft-phi-3_5-mini-metrics-performance-comparison-graph}
 \end{figure}
+
+Las métricas del modelo Phi-3.5-mini-instruct desarrollado por Microsoft nos muestran el caso de un modelo extenso de lenguaje que es comparativamente igual a Splint en términos de exactitud global, al tener ambos un valor del \textbf{50\%}.
+
+Sin embargo, este modelo difiere de Splint respecto a su precisión en el siguiente aspecto, el cual también se da en el modelo de Google que analizamos anteriormente: los falsos positivos que genera son de clases que no predice correctamente. Esto puede comprobarse claramente en los datos de las métricas, donde se ve que el modelo detecta debilidades de clases que no se recogen en el conjunto de validación.
+
+En general, se observa que rinde de una forma similar a Splint, aunque esta claramente evidenciado por su incapacidad de poder detectar casos seguros, dado que prácticamente ningún caso seguro lo etiqueto como tal, con una tasa de verdaderos negativos prácticamente nula.
 
 \subsection{Procedimiento de ajuste fino de parámetros}
 Realizamos un pre-procesado de los datos empleados en el ajuste fino de parámetros de forma que se presentasen en formato chat y como instrucciones para las cuales el modelo entrenado diese una respuesta concreta.
@@ -616,7 +748,7 @@ Realizamos un pre-procesado de los datos empleados en el ajuste fino de parámet
 La estructura de los datos de entrenamiento son arreglos de tres objetos en los que se indica el texto y el rol desde el cual se interpreta:
 
 \begin{itemize}
-	\item Rol \texttt{SYSTEM}. A partir de este rol se proporciona la instrucción global en la que se define la salvaguarda (\textit{guardrail}). Se especifica el formato de la salida, que ha de ser o bien \texttt{CWE-XXX}, donde XXX es un código de al menos un dígito y de un máximo de 3 dígitos, o el literal \texttt{"SAFE"}.
+	\item Rol \texttt{SYSTEM}. A partir de este rol se proporciona la instrucción global en la que se define la salvaguarda (\textit{guardrail}). Se especifica el formato de la salida, que ha de ser o bien \texttt{CWE-XXX}, donde XXX es un código de al menos un dígito y de un máximo de 3 dígitos, o el literal \texttt{\enquote{SAFE}}.
 	\item Rol \texttt{USER}. Se proporciona con este rol el código en lenguaje C a analizar e indicar si contiene o no una vulnerabilidad.
 	\item Rol \texttt{ASSISTANT}. Se proporciona la etiqueta del caso proporcionado.
 \end{itemize}
@@ -628,107 +760,280 @@ Por otro lado, los datos de validación constan de un arreglo con un único obje
 \subsection{Ajuste fino de parámetros y validación del modelo $\protect\\ \texttt{tiiuae/Falcon3-1B-Instruct}$}
 Los modelos \texttt{Falcon3} son parte de una familia de modelos de inteligencia artificial diseñados y entrenados por el \textit{Technology Innovation Institute} (TII) de los Emiratos Árabes Unidos. El modelo más liviano, de más de mil millones de parámetros, se entrenó en un corpus de texto en los idiomas inglés, francés, español y portugués. El post-entrenamiento se realizó sobre un corpus de 80 mil millones de tókenes (o \texttt{gigatokens}) compuesto por páginas web, problemas o extractos de la ciencia, tecnología, ingeniería y matemáticas (STEM), ejemplos conversacionales y llamadas de funciones de datos \cite{falcon-1b-huggingface}.
 
-	Este modelo en concreto cuenta con una ventana de contexto de hasta 8.000 tókenes, por lo que algunos ejemplos proporcionados en nuestro ajuste fino de parámetros se truncaron hasta la capacidad límite, dado que algunos exceden esa cantidad.
+Este modelo en concreto cuenta con una ventana de contexto de hasta 8.000 tókenes, por lo que algunos ejemplos proporcionados en nuestro ajuste fino de parámetros se truncaron hasta la capacidad límite, dado que algunos exceden esa cantidad.
 
 Los resultados de la validación del modelo tras realizar nuestra adaptación de bajo rango pueden observarse en la figura \ref{fig:validation-falcon3-1b-instruct-fine-tuned}. Realizando un análisis de los resultados extraemos las siguientes conclusiones:
 
-Múltiples casos se clasifican con la etiqueta \texttt{"UNKNOWN"}. Esta etiqueta se asigna cuando la respuesta proporcionada por el modelo no contiene ni un código de debilidad CWE-XXX con esa estructura, o en su defecto el literal \texttt{"SAFE"}. Por lo tanto, una respuesta la cual no se ajusta a ninguna de las anteriores descripciones se clasifica como \textbf{desconocida}. En total, 755 casos se clasificaron dentro de esta categoría, de los cuales todos ellos se etiquetaban como \texttt{"SAFE"}. Dicho de otra forma, para un 30,2 \% de casos no vulnerables, el modelo no supo dar una respuesta válida.
+Múltiples casos se clasifican con la etiqueta \texttt{\enquote{UNKNOWN}}. Esta etiqueta se asigna cuando la respuesta proporcionada por el modelo no contiene ni un código de debilidad CWE-XXX con esa estructura, o en su defecto el literal \texttt{\enquote{SAFE}}. Por lo tanto, una respuesta la cual no se ajusta a ninguna de las anteriores descripciones se clasifica como \textbf{desconocida}. En total, 755 casos se clasificaron dentro de esta categoría, de los cuales todos ellos se etiquetaban como \texttt{\enquote{SAFE}}. Dicho de otra forma, para un 30,2 \% de casos no vulnerables, el modelo no supo dar una respuesta válida.
 
-Observamos que para la etiqueta \texttt{"SAFE"} su precisión es perfecta, pero su exhaustividad es realmente baja, siendo de un 15\%. Lo que significa que el modelo generó una gran cantidad de \textbf{falsos negativos}. 
+Observamos que para la etiqueta \texttt{\enquote{SAFE}} su precisión es perfecta, pero su exhaustividad es realmente baja, siendo de un 15\%. Lo que significa que el modelo generó una gran cantidad de \textbf{falsos negativos}. 
 
 A diferencia de las dos anteriores validaciones, el modelo no genera una gran cantidad de falsos positivos en etiquetas que no forman parte del conjunto de datos, como sí genera falsos negativos. Por lo tanto, el rendimiento del modelo tras la adaptación de bajo rango es pobre para la tarea realizada, comparándolo además con los resultados proporcionados por Splint.
 
+\begin{longtable}{lrrrr}
+	\caption{Métricas de clasificación \texttt{tiiuae/Falcon3-1B-Instruct}}
+	\label{fig:validation-falcon3-1b-instruct-fine-tuned} \\
+	\toprule
+	\textbf{CWE} & \textbf{\textit{Precision}} & \textbf{\textit{Recall}} & \textbf{\textit{F1 score}} & \textbf{\textit{Support}} \\
+	\midrule
+	\endfirsthead
+	\multicolumn{5}{c}{{\bfseries \tablename\ \thetable{} -- Continuación de la página anterior}} \\
+	\toprule
+	\textbf{CWE} & \textbf{\textit{Precision}} & \textbf{\textit{Recall}} & \textbf{\textit{F1 score}} & \textbf{\textit{Support}} \\
+	\midrule
+	\endhead
+	\midrule
+	\multicolumn{5}{r}{Continúa en la siguiente página} \\
+	\endfoot
+	\midrule
+	\multicolumn{5}{l}{\textbf{\textit{Global Accuracy}:} 0.43 (43\%) -- Total de pruebas: 5.000} \\
+	\bottomrule
+	\endlastfoot
+	CWE-120 & 0.00 & 0.00 & 0.00 & 0 \\
+	CWE-121 & 0.91 & 0.40 & 0.56 & 660 \\
+	CWE-122 & 0.88 & 0.47 & 0.61 & 506 \\
+	CWE-123 & 0.67 & 1.00 & 0.80 & 2 \\
+	CWE-124 & 0.69 & 1.00 & 0.82 & 251 \\
+	CWE-126 & 0.83 & 0.85 & 0.84 & 202 \\
+	CWE-127 & 0.87 & 0.88 & 0.88 & 251 \\
+	CWE-15  & 0.00 & 0.00 & 0.00 & 0 \\
+	CWE-401 & 0.74 & 0.99 & 0.85 & 220 \\
+	CWE-415 & 0.91 & 0.98 & 0.95 & 64 \\
+	CWE-416 & 0.60 & 1.00 & 0.75 & 18 \\
+	CWE-476 & 0.82 & 1.00 & 0.90 & 67 \\
+	CWE-562 & 0.00 & 0.00 & 0.00 & 2 \\
+	CWE-590 & 0.86 & 0.93 & 0.89 & 168 \\
+	CWE-68  & 0.00 & 0.00 & 0.00 & 0 \\
+	CWE-680 & 0.92 & 0.96 & 0.94 & 23 \\
+	CWE-685 & 0.67 & 1.00 & 0.80 & 6 \\
+	CWE-688 & 1.00 & 1.00 & 1.00 & 5 \\
+	CWE-761 & 0.55 & 0.97 & 0.70 & 37 \\
+	CWE-78  & 0.00 & 0.00 & 0.00 & 0 \\
+	CWE-789 & 0.31 & 0.65 & 0.42 & 17 \\
+	CWE-835 & 1.00 & 1.00 & 1.00 & 1 \\
+	CWE-89  & 0.00 & 0.00 & 0.00 & 0 \\
+	SAFE    & 1.00 & 0.15 & 0.27 & 2500 \\
+	UNKNOWN & 0.00 & 0.00 & 0.00 & 0 \\
+\end{longtable}
+
+%\begin{figure}[H]
+%	\centering
+%	\begin{tabular}{lrrrr}
+%		\toprule
+%		\textbf{CWE} & \textbf{\textit{Precision}} & \textbf{\textit{Recall}} & \textbf{\textit{F1 score}} & \textbf{\textit{Support}} \\
+%		CWE-120 &  0.00 & 0.00 & 0.00 &    0 \\
+%		CWE-121 &  0.91 & 0.40 & 0.56 &  660 \\
+%		CWE-122 &  0.88 & 0.47 & 0.61 &  506 \\
+%		CWE-123 &  0.67 & 1.00 & 0.80 &    2 \\
+%		CWE-124 &  0.69 & 1.00 & 0.82 &  251 \\
+%		CWE-126 &  0.83 & 0.85 & 0.84 &  202 \\
+%		CWE-127 &  0.87 & 0.88 & 0.88 &  251 \\
+%		CWE-15  &  0.00 & 0.00 & 0.00 &    0 \\
+%		CWE-401 &  0.74 & 0.99 & 0.85 &  220 \\
+%		CWE-415 &  0.91 & 0.98 & 0.95 &   64 \\
+%		CWE-416 &  0.60 & 1.00 & 0.75 &   18 \\
+%		CWE-476 &  0.82 & 1.00 & 0.90 &   67 \\
+%		CWE-562 &  0.00 & 0.00 & 0.00 &    2 \\
+%		CWE-590 &  0.86 & 0.93 & 0.89 &  168 \\
+%		CWE-68  &  0.00 & 0.00 & 0.00 &    0 \\
+%		CWE-680 &  0.92 & 0.96 & 0.94 &   23 \\
+%		CWE-685 &  0.67 & 1.00 & 0.80 &    6 \\
+%		CWE-688 &  1.00 & 1.00 & 1.00 &    5 \\
+%		CWE-761 &  0.55 & 0.97 & 0.70 &   37 \\
+%		CWE-78  &  0.00 & 0.00 & 0.00 &    0 \\
+%		CWE-789 &  0.31 & 0.65 & 0.42 &   17 \\
+%		CWE-835 &  1.00 & 1.00 & 1.00 &    1 \\
+%		CWE-89  &  0.00 & 0.00 & 0.00 &    0 \\
+%		SAFE    &  1.00 & 0.15 & 0.27 & 2500 \\
+%		UNKNOWN &  0.00 & 0.00 & 0.00 &    0 \\
+%		\midrule
+%		\multicolumn{5}{l}{\textbf{\textit{Global Accuracy}:} 0.43 (43\%) -- Total de pruebas: 5.000} \\
+%		\bottomrule
+%	\end{tabular}
+%	\caption{Métricas de clasificación \texttt{tiiuae/Falcon3-1B-Instruct}}
+%	\label{fig:validation-falcon3-1b-instruct-fine-tuned}
+%\end{figure}
+
+\begin{longtable}{llr}
+	\caption[Métricas globales \texttt{tiiuae/Falcon3-1B-Instruct}]{Métricas globales macro y ponderadas por el número de pruebas (\texttt{tiiuae/Falcon3-1B-Instruct})}
+	\label{fig:global-metrics-falcon3-1B-instruct} \\
+	\toprule
+	\textbf{Métrica} & \textbf{Valor macro} & \textbf{Valor ponderado} \\
+	\midrule
+	\endfirsthead
+	\toprule
+	\textbf{Métrica} & \textbf{Valor macro} & \textbf{Valor ponderado} \\
+	\midrule
+	\endhead
+	\bottomrule
+	\endfoot
+	\bottomrule
+	\endlastfoot
+	\textit{Precision} & 0.57 (57\%) & 0.92 (92\%) \\
+	\textit{Recall}   & 0.61 (61\%) & 0.43 (43\%) \\
+	\textit{F1 score} & 0.56 (56\%) & 0.50 (50\%) \\
+\end{longtable}
+
+%\begin{figure}[hbtp]
+%	\centering
+%	\begin{tabular}{llr}
+%		\toprule
+%		\textbf{Métrica}	& \textbf{Valor macro}	& \textbf{Valor ponderado} \\
+%		\midrule
+%		\textit{Precision}	& 0.57 (57\%)			& 0.92 (92\%) \\
+%		\textit{Recall}		& 0.61 (61\%)			& 0.43 (43\%) \\
+%		\textit{F1 score}	& 0.56 (56\%)			& 0.50 (50\%) \\
+%		\bottomrule
+%	\end{tabular}
+%	\caption[Métricas globales \texttt{tiiuae/Falcon3-1B-Instruct}]{Métricas globales macro y ponderas por el número de pruebas (\texttt{tiiuae/Falcon3-1B-Instruct})}
+%	\label{fig:global-metrics-falcon3-1B-instruct}
+%\end{figure}
+
+\subsubsection{Análisis comparativo de las métricas de rendimiento con Splint}
 \begin{figure}[H]
 	\centering
-	\begin{tabular}{|l|l|l|l|l|}
-		\hline
-		\textbf{Debilidad} & \textbf{Precisión} & \textbf{Exhaustividad} & \textbf{Puntuación F1} & \textbf{Soporte} \\
-		\hline
-		\hline
-		CWE-120 &  0.00 & 0.00 & 0.00 &    0 \\
-		CWE-121 &  0.91 & 0.40 & 0.56 &  660 \\
-		CWE-122 &  0.88 & 0.47 & 0.61 &  506 \\
-		CWE-123 &  0.67 & 1.00 & 0.80 &    2 \\
-		CWE-124 &  0.69 & 1.00 & 0.82 &  251 \\
-		CWE-126 &  0.83 & 0.85 & 0.84 &  202 \\
-		CWE-127 &  0.87 & 0.88 & 0.88 &  251 \\
-		CWE-15  &  0.00 & 0.00 & 0.00 &    0 \\
-		CWE-401 &  0.74 & 0.99 & 0.85 &  220 \\
-		CWE-415 &  0.91 & 0.98 & 0.95 &   64 \\
-		CWE-416 &  0.60 & 1.00 & 0.75 &   18 \\
-		CWE-476 &  0.82 & 1.00 & 0.90 &   67 \\
-		CWE-562 &  0.00 & 0.00 & 0.00 &    2 \\
-		CWE-590 &  0.86 & 0.93 & 0.89 &  168 \\
-		CWE-68  &  0.00 & 0.00 & 0.00 &    0 \\
-		CWE-680 &  0.92 & 0.96 & 0.94 &   23 \\
-		CWE-685 &  0.67 & 1.00 & 0.80 &    6 \\
-		CWE-688 &  1.00 & 1.00 & 1.00 &    5 \\
-		CWE-761 &  0.55 & 0.97 & 0.70 &   37 \\
-		CWE-78  &  0.00 & 0.00 & 0.00 &    0 \\
-		CWE-789 &  0.31 & 0.65 & 0.42 &   17 \\
-		CWE-835 &  1.00 & 1.00 & 1.00 &    1 \\
-		CWE-89  &  0.00 & 0.00 & 0.00 &    0 \\
-		SAFE    &  1.00 & 0.15 & 0.27 & 2500 \\
-		UNKNOWN &  0.00 & 0.00 & 0.00 &    0 \\
-		\hline
-		\hline
-		EXACTITUD & & & 0.43 (43\%) & 5000 \\ 
-		\hline
-	\end{tabular}
-	\caption[Resultados análisis del modelo \texttt{tiiuae/Falcon3-1B-Instruct}]{Resultados obtenidos en la validación del modelo \texttt{tiiuae/Falcon3-1B-Instruct}}
-	\label{fig:validation-falcon3-1b-instruct-fine-tuned}
+	\includegraphics[width=1\textwidth]{images/falcon3-compared-to-splint.png}
+	\caption{Gráfico de barras con las métricas de rendimiento del ajuste fino de parámetros de Falcon3 en comparación a Splint}
+	\label{fig:falcon3-metrics-performance-comparison-graph}
 \end{figure}
 
+Los resultados del modelo Falcon3 tras realizarle un ajuste fino de parámetros son interesantes por las siguientes razones:
+
+Primero, es el único modelo de los que se realizo un ajuste fino de parámetros el cual no se ajusta correctamente al prompt de entrenamiento, de forma que genera salidas que no se ajustan a lo que se le pide al modelo. Eso se evidencia con la presencia de la etiqueta \enquote{\textbf{UNKNOWN}} en los resultados de validación.
+
+Segundo, a diferencia de los dos modelos anteriores, es capaz de poder identificar correctamente todos los casos seguros, marcando la diferencia con un valor de precisión mucho más elevado que Splint. Lo que significa que los casos positivos los predice bastante bien. Sin embargo, su tendencia a marcar los casos como negativos, es decir como casos seguros, hacen que ese modelo tenga una tasa de falsos negativos bastante elevada, lo que se observa con un valor del \textbf{43\%} de sensibilidad ponderada.
+
+En definitiva, tiene un mejor rendimiento que los dos modelos anteriores, pero es menos exacto que Splint. Por lo tanto, en términos comparativos, Splint rebasa en rendimiento a este modelo.
 
 \subsection{Ajuste fino de parámetros y validación del modelo $\protect\\ \texttt{meta-llama/Llama-3.2-1B-Instruct}$}
 Llama 3.2 es una familia de modelos extensos de lenguaje desarrollados por la empresa Meta Platforms. Este caso en concreto es un modelo ajustado al seguimiento de instrucciones con un tamaño de mil millones de parámetros. El corpus de texto con el que se pre-entrenó está compuesto de 8 idiomas: inglés, francés, alemán, italiano, español, portugués y tailandés. Este modelo está diseñado para la tarea de asistente conversacional o agente de extracción de conocimiento, resumen y reescritura de entradas o \textit{prompts}. Es importante resaltar que los modelos diseñados por Meta Platforms no son de uso libre, requieren de la aceptación de su política de uso previamente a su disposición \cite{llama-3_2-1B-huggingface}.
 
-Los resultados de la validación del modelo tras realizar nuestra adaptación de bajo rango pueden observarse en la figura \ref{fig:validation-meta-llama-llama-3_2-1B-instruct-fine-tuned}. A partir de estos resultados extraemos estas conclusiones:
+Los resultados de la validación del modelo tras realizar nuestra adaptación de bajo rango pueden observarse en la figura \ref{fig:validation-meta-llama-llama-3_2-1B-instruct-fine-tuned}.
 
-Cuenta con una baja cantidad de falsos positivos de etiquetas que no se recogen en el conjunto de datos. Además, su tasa de falsos positivos para casos \texttt{"SAFE"} es bastante baja.
+\begin{longtable}{lrrrr}
+	\caption{Métricas de clasificación \texttt{meta-llama/Llama-3.2-1B-Instruct}}
+	\label{fig:validation-meta-llama-llama-3_2-1B-instruct-fine-tuned} \\
+	\toprule
+	\textbf{CWE} & \textbf{\textit{Precision}} & \textbf{\textit{Recall}} & \textbf{\textit{F1 score}} & \textbf{\textit{Support}} \\
+	\midrule
+	\endfirsthead
+	\multicolumn{5}{c}{{\bfseries \tablename\ \thetable{} -- Continuación de la página anterior}} \\
+	\toprule
+	\textbf{CWE} & \textbf{\textit{Precision}} & \textbf{\textit{Recall}} & \textbf{\textit{F1 score}} & \textbf{\textit{Support}} \\
+	\midrule
+	\endhead
+	\midrule
+	\multicolumn{5}{r}{Continúa en la siguiente página} \\
+	\endfoot
+	\midrule
+	\multicolumn{5}{l}{\textbf{\textit{Global Accuracy}:} 0.90 (90\%) -- Total de pruebas: 5.000} \\
+	\bottomrule
+	\endlastfoot
+	CWE-121 &  0.74 & 1.00 & 0.85 &  660 \\
+	CWE-122 &  0.84 & 1.00 & 0.91 &  506 \\
+	CWE-123 &  0.67 & 1.00 & 0.80 &    2 \\
+	CWE-124 &  0.91 & 1.00 & 0.95 &  251 \\
+	CWE-126 &  0.97 & 0.97 & 0.97 &  202 \\
+	CWE-127 &  0.90 & 1.00 & 0.95 &  251 \\
+	CWE-129 &  0.00 & 0.00 & 0.00 &    0 \\
+	CWE-244 &  0.00 & 0.00 & 0.00 &    0 \\
+	CWE-401 &  0.93 & 1.00 & 0.96 &  220 \\
+	CWE-415 &  0.96 & 1.00 & 0.98 &   64 \\
+	CWE-416 &  0.53 & 1.00 & 0.69 &   18 \\
+	CWE-476 &  0.94 & 0.97 & 0.96 &   67 \\
+	CWE-480 &  0.00 & 0.00 & 0.00 &    0 \\
+	CWE-562 &  1.00 & 1.00 & 1.00 &    2 \\
+	CWE-590 &  0.89 & 1.00 & 0.94 &  168 \\
+	CWE-680 &  0.96 & 1.00 & 0.98 &   23 \\
+	CWE-685 &  0.86 & 1.00 & 0.92 &    6 \\
+	CWE-688 &  1.00 & 1.00 & 1.00 &    5 \\
+	CWE-761 &  0.84 & 1.00 & 0.91 &   37 \\
+	CWE-789 &  0.65 & 1.00 & 0.79 &   17 \\
+	CWE-835 &  1.00 & 1.00 & 1.00 &    1 \\
+	SAFE    &  1.00 & 0.81 & 0.89 & 2500 \\
+\end{longtable}
+%\begin{figure}[H]
+%	\centering
+%	\begin{tabular}{lrrrr}
+%		\toprule
+%		\textbf{CWE} & \textbf{\textit{Precision}} & \textbf{\textit{Recall}} & \textbf{\textit{F1 score}} & \textbf{\textit{Support}} \\
+%		CWE-121 &  0.74 & 1.00 & 0.85 &  660 \\
+%		CWE-122 &  0.84 & 1.00 & 0.91 &  506 \\
+%		CWE-123 &  0.67 & 1.00 & 0.80 &    2 \\
+%		CWE-124 &  0.91 & 1.00 & 0.95 &  251 \\
+%		CWE-126 &  0.97 & 0.97 & 0.97 &  202 \\
+%		CWE-127 &  0.90 & 1.00 & 0.95 &  251 \\
+%		CWE-129 &  0.00 & 0.00 & 0.00 &    0 \\
+%		CWE-244 &  0.00 & 0.00 & 0.00 &    0 \\
+%		CWE-401 &  0.93 & 1.00 & 0.96 &  220 \\
+%		CWE-415 &  0.96 & 1.00 & 0.98 &   64 \\
+%		CWE-416 &  0.53 & 1.00 & 0.69 &   18 \\
+%		CWE-476 &  0.94 & 0.97 & 0.96 &   67 \\
+%		CWE-480 &  0.00 & 0.00 & 0.00 &    0 \\
+%		CWE-562 &  1.00 & 1.00 & 1.00 &    2 \\
+%		CWE-590 &  0.89 & 1.00 & 0.94 &  168 \\
+%		CWE-680 &  0.96 & 1.00 & 0.98 &   23 \\
+%		CWE-685 &  0.86 & 1.00 & 0.92 &    6 \\
+%		CWE-688 &  1.00 & 1.00 & 1.00 &    5 \\
+%		CWE-761 &  0.84 & 1.00 & 0.91 &   37 \\
+%		CWE-789 &  0.65 & 1.00 & 0.79 &   17 \\
+%		CWE-835 &  1.00 & 1.00 & 1.00 &    1 \\
+%		SAFE    &  1.00 & 0.81 & 0.89 & 2500 \\
+%		\midrule
+%		\multicolumn{5}{l}{\textbf{\textit{Global Accuracy}:} 0.90 (90\%) -- Total de pruebas: 5.000} \\
+%		\bottomrule
+%	\end{tabular}
+%	\caption{Métricas de clasificación \texttt{meta-llama/Llama-3.2-1B-Instruct}}
+%	\label{fig:validation-meta-llama-llama-3_2-1B-instruct-fine-tuned}
+%\end{figure}
 
-Su tasa de falsos negativos es realmente baja en comparación con el modelo \protect\\ \texttt{tiiuae/Falcon3-1B-Instruct}.
+\begin{longtable}{llr}
+	\caption[Métricas globales \texttt{meta-llama/Llama-3.2-1B-Instruct}]{Métricas globales macro y ponderadas por el número de pruebas (\texttt{meta-llama/Llama-3.2-1B-Instruct})}
+	\label{fig:global-metrics-llama-3_2-1B-instruct} \\
+	\toprule
+	\textbf{Métrica} & \textbf{Valor macro} & \textbf{Valor ponderado} \\
+	\midrule
+	\endfirsthead
+	\toprule
+	\textbf{Métrica} & \textbf{Valor macro} & \textbf{Valor ponderado} \\
+	\midrule
+	\endhead
+	\bottomrule
+	\endfoot
+	\bottomrule
+	\endlastfoot
+	\textit{Precision} & 0.75 (75\%) & 0.93 (93\%) \\
+	\textit{Recall}   & 0.85 (85\%) & 0.90 (90\%) \\
+	\textit{F1 score} & 0.79 (79\%) & 0.90 (90\%) \\
+\end{longtable}
+%\begin{figure}[hbtp]
+%	\centering
+%	\begin{tabular}{llr}
+%		\toprule
+%		\textbf{Métrica}	& \textbf{Valor macro}	& \textbf{Valor ponderado} \\
+%		\midrule
+%		\textit{Precision}	& 0.75 (75\%)			& 0.93 (93\%) \\
+%		\textit{Recall}		& 0.85 (85\%)			& 0.90 (90\%) \\
+%		\textit{F1 score}	& 0.79 (79\%)			& 0.90 (90\%) \\
+%		\bottomrule
+%	\end{tabular}
+%	\caption[Métricas globales \texttt{meta-llama/Llama-3.2-1B-Instruct}]{Métricas globales macro y ponderas por el número de pruebas (\texttt{meta-llama/Llama-3.2-1B-Instruct})}
+%	\label{fig:global-metrics-llama-3_2-1B-instruct}
+%\end{figure}
 
-Su rendimiento es sobresaliente, rebasando al resto de modelos y a Splint en la realización de la tarea.
-
+\subsubsection{Análisis comparativo de las métricas de rendimiento con Splint}
 \begin{figure}[H]
 	\centering
-	\begin{tabular}{|l|l|l|l|l|}
-		\hline
-		\textbf{Debilidad} & \textbf{Precisión} & \textbf{Exhaustividad} & \textbf{Puntuación F1} & \textbf{Soporte} \\
-		\hline
-		\hline
-		CWE-121 &  0.74 & 1.00 & 0.85 &  660 \\
-		CWE-122 &  0.84 & 1.00 & 0.91 &  506 \\
-		CWE-123 &  0.67 & 1.00 & 0.80 &    2 \\
-		CWE-124 &  0.91 & 1.00 & 0.95 &  251 \\
-		CWE-126 &  0.97 & 0.97 & 0.97 &  202 \\
-		CWE-127 &  0.90 & 1.00 & 0.95 &  251 \\
-		CWE-129 &  0.00 & 0.00 & 0.00 &    0 \\
-		CWE-244 &  0.00 & 0.00 & 0.00 &    0 \\
-		CWE-401 &  0.93 & 1.00 & 0.96 &  220 \\
-		CWE-415 &  0.96 & 1.00 & 0.98 &   64 \\
-		CWE-416 &  0.53 & 1.00 & 0.69 &   18 \\
-		CWE-476 &  0.94 & 0.97 & 0.96 &   67 \\
-		CWE-480 &  0.00 & 0.00 & 0.00 &    0 \\
-		CWE-562 &  1.00 & 1.00 & 1.00 &    2 \\
-		CWE-590 &  0.89 & 1.00 & 0.94 &  168 \\
-		CWE-680 &  0.96 & 1.00 & 0.98 &   23 \\
-		CWE-685 &  0.86 & 1.00 & 0.92 &    6 \\
-		CWE-688 &  1.00 & 1.00 & 1.00 &    5 \\
-		CWE-761 &  0.84 & 1.00 & 0.91 &   37 \\
-		CWE-789 &  0.65 & 1.00 & 0.79 &   17 \\
-		CWE-835 &  1.00 & 1.00 & 1.00 &    1 \\
-		SAFE    &  1.00 & 0.81 & 0.89 & 2500 \\
-		\hline
-		\hline
-		EXACTITUD & & & 0.90 (90\%) & 5000 \\
-		\hline
-	\end{tabular}
-	\caption[Resultados análisis del modelo \texttt{meta-llama/Llama-3.2-1B-Instruct}]{Resultados obtenidos en la validación del modelo \texttt{meta-llama/Llama-3.2-1B-Instruct}}
-	\label{fig:validation-meta-llama-llama-3_2-1B-instruct-fine-tuned}
+	\includegraphics[width=1\textwidth]{images/llama-3_2-compared-to-splint.png}
+	\caption{Gráfico de barras con las métricas de rendimiento del ajuste fino de parámetros de Meta Llama 3.2 en comparación a Splint}
+	\label{fig:meta-llama-3_2-performance-comparison-graph}
 \end{figure}
 
+Los resultados del modelo Llama-3.2-1B-instruct tras realizarle un ajuste fino de parámetros nos deja con unos resultados satisfactorios. Sus valores están bastante balanceados en conjunto, aunque si que evidencia una tendencia a los falsos positivos en macro moderada, con un valor del \textbf{75\%}.
+
+Afirmamos que su rendimiento es bastante bueno al no generar tantas predicciones con etiquetas de fuera del conjunto, aunque para clases como la \texttt{CWE-416}, \texttt{CWE-789} y \texttt{CWE-123} no tiene unos valores de precisión tan elevados como otras clases, de manera que tiende a marcar varios casos de más con este tipo de vulnerabilidades.
+
+Adicionalmente, su tasa de falsos positivos es bastante baja. Lo que lo hace un modelo que puede rivalizar con Splint y que apunta a rendir mejor que este en el reconocimiento de debilidades etiquetadas en código.
 
 \subsection{Ajuste fino de parámetros y validación del modelo $\protect\\ \texttt{HuggingFaceTB/SmolLM2-1.7B-Instruct}$}
 La familia \texttt{SmolLM2} es una familia de modelos extensos de lenguaje desarrollados y entrenados por Hugging Face Smol Models Research. Respecto a la familia \texttt{SmolLM1}, estos modelos se entrenaron para ejecución de instrucciones, <<recuperación>> de conocimiento, razonamiento y problemas matemáticos. Concretamente, la variante de mil setecientos millones de parámetros se entrenó en un corpus de un total de 11 billones de tókenes, los cuales corresponden a páginas web educativas, conjuntos de datos matemáticos y con código fuente, etc \cite{smollm2-1_7b-instruct}.
@@ -741,45 +1046,142 @@ A diferencia de otras validaciones, no tenemos tantas clases que no se incluyen 
 
 Además, el modelo clasifica incorrectamente múltiples casos. A partir de este hecho podemos indicar que el modelo aprendió el conjunto de datos, pero no aprendió ni a distinguir los casos seguros de los maliciosos ni a distinguir entre un tipo de vulnerabilidad de otro eficazmente.
 
+\begin{longtable}{lrrrr}
+	\caption{Métricas de clasificación \texttt{HuggingFaceTB/SmolLM2-1.7B-Instruct}}
+	\label{fig:validation-huggingfacetb-smollm2-1_7B-instruct-fine-tuned} \\
+	\toprule
+	\textbf{CWE} & \textbf{\textit{Precision}} & \textbf{\textit{Recall}} & \textbf{\textit{F1 score}} & \textbf{\textit{Support}} \\
+	\midrule
+	\endfirsthead
+	\multicolumn{5}{c}{{\bfseries \tablename\ \thetable{} -- Continuación de la página anterior}} \\
+	\toprule
+	\textbf{CWE} & \textbf{\textit{Precision}} & \textbf{\textit{Recall}} & \textbf{\textit{F1 score}} & \textbf{\textit{Support}} \\
+	\midrule
+	\endhead
+	\midrule
+	\multicolumn{5}{r}{Continúa en la siguiente página} \\
+	\endfoot
+	\midrule
+	\multicolumn{5}{l}{\textbf{\textit{Global Accuracy}:} 0.49 (49\%) -- Total de pruebas: 5.000} \\
+	\bottomrule
+	\endlastfoot
+	CWE-120 &  0.00 & 0.00 & 0.00 &    0 \\
+	CWE-121 &  0.47 & 1.00 & 0.64 &  660 \\
+	CWE-122 &  0.53 & 1.00 & 0.69 &  506 \\
+	CWE-123 &  0.22 & 1.00 & 0.36 &    2 \\
+	CWE-124 &  0.50 & 1.00 & 0.66 &  251 \\
+	CWE-126 &  0.49 & 1.00 & 0.66 &  202 \\
+	CWE-127 &  0.51 & 1.00 & 0.67 &  251 \\
+	CWE-128 &  0.00 & 0.00 & 0.00 &    0 \\
+	CWE-401 &  0.55 & 0.95 & 0.69 &  220 \\
+	CWE-415 &  0.61 & 0.98 & 0.75 &   64 \\
+	CWE-416 &  0.39 & 1.00 & 0.56 &   18 \\
+	CWE-476 &  0.55 & 0.99 & 0.71 &   67 \\
+	CWE-562 &  0.00 & 0.00 & 0.00 &    2 \\
+	CWE-590 &  0.57 & 0.91 & 0.70 &  168 \\
+	CWE-680 &  0.47 & 0.96 & 0.63 &   23 \\
+	CWE-685 &  0.00 & 0.00 & 0.00 &    6 \\
+	CWE-688 &  0.67 & 0.40 & 0.50 &    5 \\
+	CWE-761 &  0.77 & 0.54 & 0.63 &   37 \\
+	CWE-789 &  0.94 & 0.94 & 0.94 &   17 \\
+	CWE-835 &  1.00 & 1.00 & 1.00 &    1 \\
+	SAFE    &  0.00 & 0.00 & 0.00 & 2500 \\
+
+\end{longtable}
+%\begin{figure}[H]
+%	\centering
+%	\begin{tabular}{lrrrr}
+%		\toprule
+%		\textbf{CWE} & \textbf{\textit{Precision}} & \textbf{\textit{Recall}} & \textbf{\textit{F1 score}} & 	\textbf{\textit{Support}} \\
+%		CWE-120 &  0.00 & 0.00 & 0.00 &    0 \\
+%		CWE-121 &  0.47 & 1.00 & 0.64 &  660 \\
+%		CWE-122 &  0.53 & 1.00 & 0.69 &  506 \\
+%		CWE-123 &  0.22 & 1.00 & 0.36 &    2 \\
+%		CWE-124 &  0.50 & 1.00 & 0.66 &  251 \\
+%		CWE-126 &  0.49 & 1.00 & 0.66 &  202 \\
+%		CWE-127 &  0.51 & 1.00 & 0.67 &  251 \\
+%		CWE-128 &  0.00 & 0.00 & 0.00 &    0 \\
+%		CWE-401 &  0.55 & 0.95 & 0.69 &  220 \\
+%		CWE-415 &  0.61 & 0.98 & 0.75 &   64 \\
+%		CWE-416 &  0.39 & 1.00 & 0.56 &   18 \\
+%		CWE-476 &  0.55 & 0.99 & 0.71 &   67 \\
+%		CWE-562 &  0.00 & 0.00 & 0.00 &    2 \\
+%		CWE-590 &  0.57 & 0.91 & 0.70 &  168 \\
+%		CWE-680 &  0.47 & 0.96 & 0.63 &   23 \\
+%		CWE-685 &  0.00 & 0.00 & 0.00 &    6 \\
+%		CWE-688 &  0.67 & 0.40 & 0.50 &    5 \\
+%		CWE-761 &  0.77 & 0.54 & 0.63 &   37 \\
+%		CWE-789 &  0.94 & 0.94 & 0.94 &   17 \\
+%		CWE-835 &  1.00 & 1.00 & 1.00 &    1 \\
+%		SAFE    &  0.00 & 0.00 & 0.00 & 2500 \\
+%		\midrule
+%		\multicolumn{5}{l}{\textbf{\textit{Global Accuracy}:} 0.49 (49\%) -- Total de pruebas: 5.000} \\
+%		\bottomrule
+%	\end{tabular}
+%	\caption{Métricas de clasificación \texttt{HuggingFaceTB/SmolLM2-1.7B-Instruct}}
+%	\label{fig:validation-huggingfacetb-smollm2-1_7B-instruct-fine-tuned}
+%\end{figure}
+
+\begin{longtable}{llr}
+	\caption[Métricas globales \texttt{HuggingFaceTB/SmolLM2-1.7B-Instructt}]{Métricas globales macro y ponderadas por el número de pruebas (\texttt{HuggingFaceTB/SmolLM2-1.7B-Instructt})}
+	\label{fig:global-metrics-smollm2-1_7B-instruct} \\
+	\toprule
+	\textbf{Métrica} & \textbf{Valor macro} & \textbf{Valor ponderado} \\
+	\midrule
+	\endfirsthead
+	\toprule
+	\textbf{Métrica} & \textbf{Valor macro} & \textbf{Valor ponderado} \\
+	\midrule
+	\endhead
+	\bottomrule
+	\endfoot
+	\bottomrule
+	\endlastfoot
+	\textit{Precision} & 0.44 (44\%) & 0.26 (26\%) \\
+	\textit{Recall}   & 0.70 (70\%) & 0.49 (49\%) \\
+	\textit{F1 score} & 0.51 (51\%) & 0.33 (33\%) \\
+\end{longtable}
+%\begin{figure}[H]
+%	\centering
+%	\begin{tabular}{llr}
+%		\toprule
+%		\textbf{Métrica}	& \textbf{Valor macro}	& \textbf{Valor ponderado} \\
+%		\midrule
+%		\textit{Precision}	& 0.44 (44\%)			& 0.26 (26\%) \\
+%		\textit{Recall}		& 0.70 (70\%)			& 0.49 (49\%) \\
+%		\textit{F1 score}	& 0.51 (51\%)			& 0.33 (33\%) \\
+%		\bottomrule
+%	\end{tabular}
+%	\caption[Métricas globales \texttt{HuggingFaceTB/SmolLM2-1.7B-Instructt}]{Métricas globales macro y ponderas por el número de pruebas (\texttt{HuggingFaceTB/SmolLM2-1.7B-Instructt})}
+%	\label{fig:global-metrics-smollm2-1_7B-instruct}
+%\end{figure}
+
+\subsubsection{Análisis comparativo de las métricas de rendimiento con Splint}
 \begin{figure}[H]
 	\centering
-	\begin{tabular}{|l|l|l|l|l|}
-		\hline
-		\textbf{Debilidad} & \textbf{Precisión} & \textbf{Exhaustividad} & \textbf{Puntuación F1} & \textbf{Soporte} \\
-		\hline
-		\hline
-		CWE-120 &  0.00 & 0.00 & 0.00 &    0 \\
-		CWE-121 &  0.47 & 1.00 & 0.64 &  660 \\
-		CWE-122 &  0.53 & 1.00 & 0.69 &  506 \\
-		CWE-123 &  0.22 & 1.00 & 0.36 &    2 \\
-		CWE-124 &  0.50 & 1.00 & 0.66 &  251 \\
-		CWE-126 &  0.49 & 1.00 & 0.66 &  202 \\
-		CWE-127 &  0.51 & 1.00 & 0.67 &  251 \\
-		CWE-128 &  0.00 & 0.00 & 0.00 &    0 \\
-		CWE-401 &  0.55 & 0.95 & 0.69 &  220 \\
-		CWE-415 &  0.61 & 0.98 & 0.75 &   64 \\
-		CWE-416 &  0.39 & 1.00 & 0.56 &   18 \\
-		CWE-476 &  0.55 & 0.99 & 0.71 &   67 \\
-		CWE-562 &  0.00 & 0.00 & 0.00 &    2 \\
-		CWE-590 &  0.57 & 0.91 & 0.70 &  168 \\
-		CWE-680 &  0.47 & 0.96 & 0.63 &   23 \\
-		CWE-685 &  0.00 & 0.00 & 0.00 &    6 \\
-		CWE-688 &  0.67 & 0.40 & 0.50 &    5 \\
-		CWE-761 &  0.77 & 0.54 & 0.63 &   37 \\
-		CWE-789 &  0.94 & 0.94 & 0.94 &   17 \\
-		CWE-835 &  1.00 & 1.00 & 1.00 &    1 \\
-		SAFE    &  0.00 & 0.00 & 0.00 & 2500 \\
-		\hline
-		\hline
-		EXACTITUD & & & 0.49 (49\%) & 5000 \\
-		\hline
-	\end{tabular}
-	\caption[Resultados análisis del modelo \texttt{HuggingFaceTB/SmolLM2-1.7B-Instruct}]{Resultados obtenidos en la validación del modelo \texttt{HuggingFaceTB/SmolLM2-1.7B-Instruct}}
-	\label{fig:validation-huggingfacetb-smollm2-1_7B-instruct-fine-tuned}
+	\includegraphics[width=1\textwidth]{images/smollm2-compared-to-splint.png}
+	\caption{Gráfico de barras con las métricas de rendimiento del ajuste fino de parámetros de Hugging Face SmolLM2 en comparación a Splint}
+	\label{fig:smollm2-performance-comparison-graph}
 \end{figure}
 
+Las métricas de la validación del ajuste fino de parámetros realizado sobre el modelo SmolLM2 de Hugging Face nos dejan con una impresión muy similar a la de ajuste fino de Falcon3, pero con otros aspectos que lo hacen resaltar.
 
-\section{Conclusiones}
+Su tasa exactitud global es ligeramente peor a la de Splint, con un \textbf{49\%}, y además tiene una precisión ponderada realmente baja, de un \textbf{26\%}. Esto lo explicamos por su elevada tasa de falsos positivos, dado que este modelo tampoco es capaz de identificar y etiquetar los casos seguros, en su lugar todo lo etiqueta como vulnerable.
+
+Sin embargo, su exhaustividad macro es superior, con un \textbf{70\%} indicando que aprendió a identificar correctamente vulnerabilidades especificas. Pero aún así, en conjunto, tiene un rendimiento ligeramente peor a Splint.
+
+%\section{Resumen de gráficas comparativas}
+%\begin{landscape}
+%	\begin{figure}[htpb]
+%		\centering
+%		\includegraphics[width=1.5\textwidth]{images/performance-comparison-graph.png}
+%		\caption{Gráficas de comparación de rendimiento entre Splint y los modelos extensos de lenguaje}
+%		\label{fig:performance-comparison-graph}
+%	\end{figure}
+%\end{landscape}
+
+\section{Conclusiones y líneas futuras}
+\subsection{Conclusiones}
 La exposición de todos los resultados obtenidos, tanto de la validación de Splint como de los modelos extensos de lenguaje sobre los que se realizó un ajuste fino de parámetros y de igual forma de los que no, nos conduce a afirmar lo siguiente.
 
 Primero, que herramientas como los analizadores de código estático continúan como una pieza central en el análisis de \textit{code smells}, fallas en el código, debilidades y vulnerabilidades. A pesar de la elevada tasa de falsos positivos reportada por la herramienta Splint, esta herramienta tuvo su última actualización a la versión 3.1.2 en el 12 de julio del año 2007, dicho de otra forma, lleva casi dos décadas sin actualizarse. Es por ello que para un análisis exhaustivo de código escrito tanto en el lenguaje C como C++ se opta por otros analizadores de código estático, como Clang-Tidy o Frama-C-Eva, a los cuales se les da soporte en la actualidad. Por lo tanto, los SAST continúan como herramientas imprescindibles en el control de vulnerabilidades y como comprobadores en tuberías de integración continua y despliegue continuo.
@@ -794,6 +1196,7 @@ Con respecto a los resultados obtenidos en la validación de los modelos sobre l
 	
 	\item Que los resultados de la validación de los modelos sobre los que se realizó un ajuste fino de parámetros están en gran medida determinados por la cantidad de casos de prueba, los cuales son 15.000, y que el entrenamiento y validación se realizaron sobre medios de cómputo realmente limitados, en concreto sobre una NVIDIA GeForce RTX 2070 Laptop GPU con 8 GB de VRAM GDDR6. 
 \end{itemize}
+
 
 \subsection{Líneas futuras}
 En líneas futuras pueden emplearse conjuntos de datos enriquecidos con ejemplos de código real en múltiples aplicaciones intensivas en el uso de datos, un ejemplo de esto es el conjunto de datos NIST SARD, que es un repositorio con muestras de código de aplicaciones como SQLite, FFmpeg, Wireshark o Gimp; además de ejemplos de código en el lenguaje Java \cite{nist-sard}.
